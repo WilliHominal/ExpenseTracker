@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="csv_headers">id,date,type,accountId,categoryId,amountMinor,currency,merchant,note</string>
+    <string name="csv_name">transactions</string>
+    <string name="export_csv_title">Export CSV</string>
+
+    <string name="transactions_title">Transactions</string>
+    <string name="transactions_export_cd">Export</string>
+    <string name="transactions_transaction_default_name">Transaction</string>
+
+    <string name="add_transaction_error_account_or_amount_invalid">Amount and account are required</string>
+    <string name="add_transaction_error_default">Amount and account are required</string>
+    <string name="add_transaction_title">New Transaction</string>
+    <string name="add_transaction_save_button">Save</string>
+    <string name="add_transaction_save_button_loading">Saving…</string>
+    <string name="add_transaction_amount_label">Amount</string>
+    <string name="add_transaction_tx_type_expense">Expense</string>
+    <string name="add_transaction_tx_type_income">Income</string>
+    <string name="add_transaction_date_button">Date: %1$s</string>
+    <string name="add_transaction_account_label">Account</string>
+    <string name="add_transaction_category_label">Category (optional)</string>
+    <string name="add_transaction_merchant_label">Merchant</string>
+    <string name="add_transaction_note_label">Note</string>
+    <string name="add_transaction_select">Select</string>
+    <string name="add_transaction_cancel">Cancel</string>
+    <string name="add_transaction_ok">OK</string>
+</resources>

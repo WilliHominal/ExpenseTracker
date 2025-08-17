@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Top bar -->
+    <string name="budgets_title_month_year">Presupuestos %1$d/%2$d</string>
+
+    <!-- Empty state -->
+    <string name="budgets_empty_state">Sin presupuestos para este mes</string>
+
+    <!-- Row actions / menu -->
+    <string name="budgets_edit">Editar</string>
+    <string name="budgets_delete">Eliminar</string>
+    <string name="budgets_more_cd">Más opciones</string>
+
+    <!-- Progress / status -->
+    <string name="budgets_progress_value">%1$s / %2$s</string>
+    <string name="budgets_over_suffix"> • Excedido</string>
+    <string name="budgets_warn_suffix_percent"> • %1$d%%</string>
+
+    <!-- Dialog -->
+    <string name="budgets_dialog_title_new">Nuevo presupuesto</string>
+    <string name="budgets_dialog_title_edit">Editar presupuesto</string>
+    <string name="budgets_create">Crear</string>
+    <string name="budgets_save">Guardar</string>
+    <string name="budgets_cancel">Cancelar</string>
+
+    <!-- Fields -->
+    <string name="budgets_category_label">Categoría</string>
+    <string name="budgets_select">Seleccionar</string>
+    <string name="budgets_limit_label_example">Límite (ej. 20000.00)</string>
+</resources>

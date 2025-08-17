@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="categories_error_name_required">El nombre es requerido</string>
+    <string name="categories_error_delete_blocked">No se puede eliminar: tiene movimientos o presupuestos.</string>
+
+    <string name="categories_edit_button">Editar</string>
+    <string name="categories_name_label">Nombre</string>
+    <string name="categories_color_label">Color</string>
+    <string name="categories_save_button">Guardar</string>
+    <string name="categories_cancel_button">Cancelar</string>
+</resources>

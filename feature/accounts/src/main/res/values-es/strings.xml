@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Editor fields -->
+    <string name="accounts_name_label">Nombre de cuenta</string>
+    <string name="accounts_type_label">Tipo</string>
+    <string name="accounts_currency_label">Moneda</string>
+    <string name="accounts_initial_balance_label">Saldo inicial (%1$s)</string>
+    <string name="accounts_initial_balance_hint">Ej.: 1000.50</string>
+
+    <!-- List / actions -->
+    <string name="accounts_edit">Editar</string>
+    <string name="accounts_delete">Eliminar</string>
+    <string name="accounts_cancel">Cancelar</string>
+    <string name="accounts_save">Guardar</string>
+    <string name="accounts_add_cd">Agregar cuenta</string>
+    <string name="accounts_delete_cd">Eliminar cuenta</string>
+    <string name="accounts_item_meta">%1$s • %2$s</string>
+
+    <!-- Errors -->
+    <string name="accounts_error_name_required">El nombre es obligatorio</string>
+    <string name="accounts_error_delete_blocked">No se puede eliminar: la cuenta tiene movimientos.</string>
+</resources>

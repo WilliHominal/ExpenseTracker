@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="csv_headers">id,fecha,tipo,cuentaId,categoriaId,montoEnCentavos,moneda,comercio,nota</string>
+    <string name="csv_name">transacciones</string>
+    <string name="export_csv_title">Exportar CSV</string>
+
+    <string name="transactions_title">Transacciones</string>
+    <string name="transactions_export_cd">Exportar</string>
+    <string name="transactions_transaction_default_name">Transacción</string>
+
+    <string name="add_transaction_error_account_or_amount_invalid">Importe y cuenta son obligatorios</string>
+    <string name="add_transaction_error_default">Importe y cuenta son obligatorios</string>
+    <string name="add_transaction_title">Nueva transacción</string>
+    <string name="add_transaction_save_button">Guardar</string>
+    <string name="add_transaction_save_button_loading">Guardando…</string>
+    <string name="add_transaction_amount_label">Importe</string>
+    <string name="add_transaction_tx_type_expense">Gasto</string>
+    <string name="add_transaction_tx_type_income">Ingreso</string>
+    <string name="add_transaction_date_button">Fecha: %1$s</string>
+    <string name="add_transaction_account_label">Cuenta</string>
+    <string name="add_transaction_category_label">Categoría (opcional)</string>
+    <string name="add_transaction_merchant_label">Comercio</string>
+    <string name="add_transaction_note_label">Nota</string>
+    <string name="add_transaction_select">Seleccionar</string>
+    <string name="add_transaction_cancel">Cancelar</string>
+    <string name="add_transaction_ok">OK</string>
+</resources>

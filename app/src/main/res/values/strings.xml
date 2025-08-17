@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ExpenseTracker</string>
+    <string name="bottom_menu_transactions">Transactions</string>
+    <string name="bottom_menu_budgets">Budgets</string>
+    <string name="bottom_menu_categories">Categories</string>
+    <string name="bottom_menu_accounts">Accounts</string>
+</resources>
