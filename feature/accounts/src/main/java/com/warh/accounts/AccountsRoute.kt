@@ -1,5 +1,6 @@
 package com.warh.accounts
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,9 +46,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun AccountsRoute(vm: AccountsViewModel = org.koin.androidx.compose.koinViewModel()) {
+fun AccountsRoute(
+    vm: AccountsViewModel = koinViewModel(),
+    onAccountClick: (Long) -> Unit,
+) {
     val ui by vm.ui.collectAsState()
     val snackBar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -93,7 +98,7 @@ fun AccountsRoute(vm: AccountsViewModel = org.koin.androidx.compose.koinViewMode
                                 }) { Icon(Icons.Default.Delete, null) }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().clickable { onAccountClick(acc.id) }
                     )
                     HorizontalDivider()
                 }

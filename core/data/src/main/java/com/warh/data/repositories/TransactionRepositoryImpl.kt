@@ -47,4 +47,17 @@ class TransactionRepositoryImpl(
     override suspend fun merchantSuggestions(prefix: String): List<String> = withContext(io) {
         db.merchantSuggestDao().suggestions(prefix)
     }
+
+    override suspend fun listByAccount(accountId: Long, filter: TransactionFilter): List<Transaction> = withContext(io) {
+        val df = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        val fromStr = filter.from?.format(df)
+        val toStr = filter.to?.format(df)
+        val entities = db.transactionDao().listByAccount(
+            accountId = accountId,
+            from = fromStr,
+            to = toStr,
+            text = filter.text
+        )
+        entities.map { it.toDomain() }
+    }
 }

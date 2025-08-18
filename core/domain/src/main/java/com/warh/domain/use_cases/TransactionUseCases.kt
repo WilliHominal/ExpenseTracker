@@ -21,3 +21,11 @@ class DeleteTransactionUseCase(private val repo: TransactionRepository) {
 class GetMerchantSuggestionsUseCase(private val repo: TransactionRepository) {
     suspend operator fun invoke(prefix: String): List<String> = repo.merchantSuggestions(prefix)
 }
+
+class GetAccountTransactionsUseCase(
+    private val repo: TransactionRepository
+) {
+    suspend operator fun invoke(accountId: Long, filter: TransactionFilter): List<Transaction> {
+        return repo.listByAccount(accountId, filter)
+    }
+}

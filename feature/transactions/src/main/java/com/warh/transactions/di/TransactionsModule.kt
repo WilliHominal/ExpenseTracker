@@ -1,6 +1,7 @@
 package com.warh.transactions.di
 
 import com.warh.domain.use_cases.AddTransactionUseCase
+import com.warh.domain.use_cases.GetAccountTransactionsUseCase
 import com.warh.domain.use_cases.GetAccountUseCase
 import com.warh.domain.use_cases.GetAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
@@ -24,4 +25,5 @@ val transactionsModule = module {
     factoryOf(::GetCategoriesUseCase)
     factoryOf(::AddTransactionUseCase)
     factoryOf(::GetMerchantSuggestionsUseCase)
+    factoryOf(::GetAccountTransactionsUseCase)
 }

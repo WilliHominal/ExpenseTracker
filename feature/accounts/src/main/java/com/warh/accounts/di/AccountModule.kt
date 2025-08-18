@@ -1,6 +1,7 @@
 package com.warh.accounts.di
 
 import com.warh.accounts.AccountsViewModel
+import com.warh.accounts.details.AccountDetailViewModel
 import com.warh.domain.use_cases.CanDeleteAccountUseCase
 import com.warh.domain.use_cases.DeleteAccountUseCase
 import com.warh.domain.use_cases.GetAccountUseCase
@@ -11,6 +12,7 @@ import org.koin.dsl.module
 
 val accountsModule = module {
     viewModelOf(::AccountsViewModel)
+    viewModelOf(::AccountDetailViewModel)
 
     factoryOf(::GetAccountUseCase)
     factoryOf(::UpsertAccountUseCase)

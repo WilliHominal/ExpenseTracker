@@ -11,4 +11,5 @@ interface TransactionRepository {
     suspend fun delete(id: Long)
     suspend fun list(filter: TransactionFilter): List<Transaction>
     suspend fun merchantSuggestions(prefix: String): List<String>
+    suspend fun listByAccount(accountId: Long, filter: TransactionFilter): List<Transaction>
 }

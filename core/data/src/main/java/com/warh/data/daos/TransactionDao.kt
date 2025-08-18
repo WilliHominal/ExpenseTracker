@@ -59,4 +59,19 @@ interface TransactionDao {
 
     @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :id")
     suspend fun txCountForCategory(id: Long): Int
+
+    @Query("""
+        SELECT * FROM transactions
+        WHERE accountId = :accountId
+          AND (:from IS NULL OR date >= :from)
+          AND (:to   IS NULL OR date <  :to)
+          AND (:text IS NULL OR (merchant LIKE '%'||:text||'%' OR note LIKE '%'||:text||'%'))
+        ORDER BY date DESC
+    """)
+    suspend fun listByAccount(
+        accountId: Long,
+        from: String?,
+        to: String?,
+        text: String?
+    ): List<TransactionEntity>
 }
