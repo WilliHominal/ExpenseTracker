@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "7b3f8dc0ef37efd5a1b276e2f4de2ceb",
+    "identityHash": "50ea85be03b8647ca3cf4b5f96f5e31a",
     "entities": [
       {
         "tableName": "accounts",
@@ -78,7 +78,7 @@
       },
       {
         "tableName": "transactions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `accountId` INTEGER NOT NULL, `type` TEXT NOT NULL, `amountMinor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `date` TEXT NOT NULL, `categoryId` INTEGER, `merchant` TEXT, `note` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `accountId` INTEGER NOT NULL, `type` TEXT NOT NULL, `amountMinor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `date` TEXT NOT NULL, `yearMonth` TEXT NOT NULL, `categoryId` INTEGER, `merchant` TEXT, `note` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -117,6 +117,12 @@
             "notNull": true
           },
           {
+            "fieldPath": "yearMonth",
+            "columnName": "yearMonth",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
             "fieldPath": "categoryId",
             "columnName": "categoryId",
             "affinity": "INTEGER"
@@ -149,6 +155,34 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_type_categoryId_date` ON `${TABLE_NAME}` (`type`, `categoryId`, `date`)"
+          },
+          {
+            "name": "index_transactions_accountId_date",
+            "unique": false,
+            "columnNames": [
+              "accountId",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_accountId_date` ON `${TABLE_NAME}` (`accountId`, `date`)"
+          },
+          {
+            "name": "index_transactions_date",
+            "unique": false,
+            "columnNames": [
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_date` ON `${TABLE_NAME}` (`date`)"
+          },
+          {
+            "name": "index_transactions_merchant",
+            "unique": false,
+            "columnNames": [
+              "merchant"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_merchant` ON `${TABLE_NAME}` (`merchant`)"
           }
         ]
       },
@@ -193,7 +227,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7b3f8dc0ef37efd5a1b276e2f4de2ceb')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '50ea85be03b8647ca3cf4b5f96f5e31a')"
     ]
   }
 }

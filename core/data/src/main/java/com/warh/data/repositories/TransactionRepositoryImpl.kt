@@ -10,45 +10,45 @@ import com.warh.data.mappers.toEntity
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TransactionFilter
 import com.warh.domain.repositories.TransactionRepository
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
+import java.time.YearMonth
 
 class TransactionRepositoryImpl(
     private val db: AppDatabase,
-    private val io: CoroutineDispatcher
 ) : TransactionRepository {
     override fun pager(filter: TransactionFilter): Flow<PagingData<Transaction>> =
         Pager(
-            config = PagingConfig(pageSize = 30, prefetchDistance = 60, enablePlaceholders = false),
-            pagingSourceFactory = { db.transactionDao().paging(filter.from, filter.to, filter.text) }
+            config = PagingConfig(
+                pageSize = 30,
+                prefetchDistance = 60,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                db.transactionDao().paging(filter.from, filter.to, filter.text)
+            }
         ).flow
-            .map { it.map { e -> e.toDomain() } }
-            .flowOn(io)
+        .map { paging -> paging.map { it.toDomain() } }
 
-    override suspend fun add(tx: Transaction): Long = withContext(io) {
+    override suspend fun add(tx: Transaction): Long =
         db.transactionDao().upsert(tx.toEntity())
-    }
 
-    override suspend fun delete(id: Long) = withContext(io) {
+    override suspend fun delete(id: Long) =
         db.transactionDao().delete(id)
-    }
 
-    override suspend fun list(filter: TransactionFilter): List<Transaction> = withContext(io) {
+    override suspend fun list(filter: TransactionFilter): List<Transaction> {
         val df = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
         val fromStr = filter.from?.format(df)
         val toStr = filter.to?.format(df)
         val entities = db.transactionDao().list(fromStr, toStr, filter.text)
-        entities.map { it.toDomain() }
+        return entities.map { it.toDomain() }
     }
 
-    override suspend fun merchantSuggestions(prefix: String): List<String> = withContext(io) {
+    override suspend fun merchantSuggestions(prefix: String): List<String> =
         db.merchantSuggestDao().suggestions(prefix)
-    }
 
-    override suspend fun listByAccount(accountId: Long, filter: TransactionFilter): List<Transaction> = withContext(io) {
+    override suspend fun listByAccount(accountId: Long, filter: TransactionFilter): List<Transaction> {
         val df = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
         val fromStr = filter.from?.format(df)
         val toStr = filter.to?.format(df)
@@ -58,6 +58,12 @@ class TransactionRepositoryImpl(
             to = toStr,
             text = filter.text
         )
-        entities.map { it.toDomain() }
+        return entities.map { it.toDomain() }
     }
+
+    override suspend fun sumsByMonth(from: LocalDateTime?, to: LocalDateTime?, accountId: Long?) =
+        db.transactionDao().sumsByMonth(from, to, accountId)
+
+    override suspend fun spentByCategory(ym: YearMonth, accountId: Long?) =
+        db.transactionDao().spentByCategory(ym.toString(), accountId)
 }

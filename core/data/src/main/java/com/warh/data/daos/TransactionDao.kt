@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.warh.domain.dto.CategorySpendDTO
+import com.warh.domain.dto.MonthlySumDTO
 import com.warh.data.entities.TransactionEntity
 import com.warh.data.utils.CategorySpentRow
 import java.time.LocalDateTime
@@ -13,11 +15,11 @@ import java.time.LocalDateTime
 interface TransactionDao {
     @Query(
         """
-        SELECT * FROM transactions
-        WHERE (:from IS NULL OR date >= :from)
-          AND (:to   IS NULL OR date <= :to)
-          AND (:text IS NULL OR note LIKE '%' || :text || '%' OR merchant LIKE '%' || :text || '%')
-        ORDER BY date DESC
+            SELECT * FROM transactions
+            WHERE (:from IS NULL OR date >= :from)
+              AND (:to   IS NULL OR date  < :to)
+              AND (:text IS NULL OR LOWER(merchant) LIKE '%'||:text||'%' OR LOWER(note) LIKE '%'||:text||'%')
+            ORDER BY date DESC
         """
     )
     fun paging(
@@ -32,20 +34,31 @@ interface TransactionDao {
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun delete(id: Long)
 
-    @Query("SELECT COALESCE(SUM(amountMinor),0) FROM transactions WHERE type='EXPENSE' AND categoryId=:categoryId AND substr(date,1,7)=:yearMonth")
-    suspend fun spentForCategoryYearMonth(categoryId: Long, yearMonth: String): Long
+    @Query("""
+        SELECT COALESCE(SUM(amountMinor), 0)
+        FROM transactions
+        WHERE type = 'EXPENSE'
+          AND categoryId = :categoryId
+          AND date >= :from AND date < :to
+    """)
+    suspend fun spentForCategoryInRange(
+        categoryId: Long,
+        from: String,
+        to: String
+    ): Long
 
     @Query("""
         SELECT categoryId AS categoryId, COALESCE(SUM(amountMinor), 0) AS spent
         FROM transactions
         WHERE type = 'EXPENSE'
           AND categoryId IN (:categoryIds)
-          AND substr(date, 1, 7) = :yearMonth
+          AND date >= :from AND date < :to
         GROUP BY categoryId
     """)
-    suspend fun spentForCategories(
+    suspend fun spentForCategoriesInRange(
         categoryIds: List<Long>,
-        yearMonth: String
+        from: String,
+        to: String
     ): List<CategorySpentRow>
 
     @Query("""
@@ -74,4 +87,29 @@ interface TransactionDao {
         to: String?,
         text: String?
     ): List<TransactionEntity>
+
+    @Query("""
+        SELECT yearMonth,
+               SUM(CASE WHEN type = 'INCOME'  THEN amountMinor ELSE 0 END) AS incomeMinor,
+               SUM(CASE WHEN type = 'EXPENSE' THEN amountMinor ELSE 0 END) AS expenseMinor
+        FROM transactions
+        WHERE (:from IS NULL OR date >= :from)
+          AND (:to   IS NULL OR date  < :to)
+          AND (:accountId IS NULL OR accountId = :accountId)
+        GROUP BY yearMonth
+        ORDER BY yearMonth ASC
+    """)
+    suspend fun sumsByMonth(from: LocalDateTime?, to: LocalDateTime?, accountId: Long?): List<MonthlySumDTO>
+
+    @Query("""
+        SELECT categoryId AS categoryId,
+               COALESCE(SUM(amountMinor),0) AS spentMinor
+        FROM transactions
+        WHERE type = 'EXPENSE'
+          AND yearMonth = :ym
+          AND (:accountId IS NULL OR accountId = :accountId)
+        GROUP BY categoryId
+        ORDER BY spentMinor DESC
+    """)
+    suspend fun spentByCategory(ym: String, accountId: Long?): List<CategorySpendDTO>
 }

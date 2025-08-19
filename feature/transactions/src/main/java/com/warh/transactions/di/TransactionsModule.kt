@@ -6,6 +6,8 @@ import com.warh.domain.use_cases.GetAccountUseCase
 import com.warh.domain.use_cases.GetAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetMerchantSuggestionsUseCase
+import com.warh.domain.use_cases.GetMonthlyCategorySpendUseCase
+import com.warh.domain.use_cases.GetMonthlySumsUseCase
 import com.warh.domain.use_cases.GetTransactionsPagerUseCase
 import com.warh.transactions.AddEditTransactionViewModel
 import com.warh.transactions.TransactionsExportViewModel
@@ -26,4 +28,6 @@ val transactionsModule = module {
     factoryOf(::AddTransactionUseCase)
     factoryOf(::GetMerchantSuggestionsUseCase)
     factoryOf(::GetAccountTransactionsUseCase)
+    factoryOf(::GetMonthlySumsUseCase)
+    factoryOf(::GetMonthlyCategorySpendUseCase)
 }

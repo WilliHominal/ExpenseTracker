@@ -9,10 +9,12 @@ import com.warh.domain.use_cases.CanDeleteCategoryUseCase
 import com.warh.domain.use_cases.DeleteCategoryUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.UpsertCategoryUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class CategoriesUiState(
     val items: List<Category> = emptyList(),
@@ -40,7 +42,9 @@ class CategoriesViewModel(
     init { refresh() }
 
     private fun refresh() = viewModelScope.launch {
-        _ui.update { it.copy(items = getCategories(), draft = null, error = null) }
+        val items = runCatching { io { getCategories() } }
+            .getOrDefault(emptyList())
+        _ui.update { it.copy(items = items, draft = null, error = null) }
     }
 
     fun startAdd() = _ui.update { it.copy(draft = CategoryDraft()) }
@@ -57,21 +61,32 @@ class CategoriesViewModel(
 
     fun save() {
         val d = _ui.value.draft ?: return
-        if (d.name.isBlank()) { _ui.update { it.copy(error = strings[R.string.categories_error_name_required]) }; return }
+        if (d.name.isBlank()) {
+            _ui.update { it.copy(error = strings[R.string.categories_error_name_required]) }
+            return
+        }
         viewModelScope.launch {
-            upsert(Category(id = d.id ?: 0L, name = d.name.trim(), colorArgb = d.colorArgb))
+            runCatching {
+                io { upsert(Category(id = d.id ?: 0L, name = d.name.trim(), colorArgb = d.colorArgb)) }
+            }.onFailure { e ->
+                _ui.update { it.copy(error = e.message ?: strings[R.string.categories_error_name_required]) }
+            }
             refresh()
         }
     }
 
     fun remove(id: Long, onBlocked: (String) -> Unit) {
         viewModelScope.launch {
-            if (!canDelete(id)) {
+            val allowed = runCatching { io { canDelete(id) } }.getOrDefault(false)
+            if (!allowed) {
                 onBlocked(strings[R.string.categories_error_delete_blocked])
                 return@launch
             }
-            delete(id)
+            runCatching { io { delete(id) } }
             refresh()
         }
     }
+
+    private suspend fun <T> io(block: suspend () -> T): T =
+        withContext(Dispatchers.IO) { block() }
 }

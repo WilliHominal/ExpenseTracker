@@ -10,13 +10,16 @@ import com.warh.domain.models.Budget
 import com.warh.domain.models.Category
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TxType
+import java.time.format.DateTimeFormatter
+
+private val YM: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
 fun TransactionEntity.toDomain() = Transaction(
     id, accountId, TxType.valueOf(type), amountMinor, currency, date, categoryId, merchant, note
 )
 
 fun Transaction.toEntity() = TransactionEntity(
-    id, accountId, type.name, amountMinor, currency, date, categoryId, merchant, note
+    id, accountId, type.name, amountMinor, currency, date, date.format(YM), categoryId, merchant, note
 )
 
 fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), currency, balanceMinor)

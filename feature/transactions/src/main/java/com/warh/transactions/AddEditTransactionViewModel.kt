@@ -12,10 +12,20 @@ import com.warh.domain.use_cases.AddTransactionUseCase
 import com.warh.domain.use_cases.GetAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetMerchantSuggestionsUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.Currency
 import java.util.Locale
@@ -36,6 +46,7 @@ data class TxEditorUiState(
     val merchantSuggestions: List<String> = emptyList(),
 )
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class AddEditTransactionViewModel(
     private val addTx: AddTransactionUseCase,
     private val getAccounts: GetAccountsUseCase,
@@ -47,36 +58,40 @@ class AddEditTransactionViewModel(
     private val _ui = MutableStateFlow(TxEditorUiState())
     val ui: StateFlow<TxEditorUiState> = _ui
 
-    //private var autoCatRules: List<Pair<Regex, Long>> = emptyList()
+    private val merchantQuery = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
-            val accs = getAccounts()
-            val cats = getCategories()
-            _ui.update { it.copy(accounts = accs, categories = cats, accountId = accs.firstOrNull()?.id) }
-            //buildAutoCatRules(cats)
+            val accounts = runCatching { io { getAccounts() } }.getOrDefault(emptyList())
+            val categories = runCatching { io { getCategories() } }.getOrDefault(emptyList())
+            _ui.update {
+                it.copy(
+                    accounts = accounts,
+                    categories = categories,
+                    accountId = accounts.firstOrNull()?.id
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            merchantQuery
+                .map { it.trim() }
+                .debounce(250)
+                .distinctUntilChanged()
+                .flatMapLatest { s ->
+                    if (s.length >= 2) flow {
+                        val items = runCatching { io { getMerchantSuggestions(s) } }
+                            .getOrElse { emptyList() }
+                        emit(items)
+                    } else {
+                        flowOf(emptyList())
+                    }
+                }
+                .collect { items ->
+                    _ui.update { it.copy(merchantSuggestions = items) }
+                }
         }
     }
-
-    /*private fun buildAutoCatRules(cats: List<Category>) {
-        val byName = cats.associateBy { it.name.trim().lowercase() }
-        fun id(name: String) = byName[name.trim().lowercase()]?.id
-        autoCatRules = listOf(
-            Regex("\\b(uber|cabify|didi)\\b", RegexOption.IGNORE_CASE) to id("Transporte"),
-            Regex("\\b(mc|kfc|burger|subway|coto|carrefour|jumbo|disco)\\b", RegexOption.IGNORE_CASE) to id("Comida"),
-            Regex("\\b(movistar|claro|personal)\\b", RegexOption.IGNORE_CASE) to id("Servicios"),
-        ).mapNotNull { (rx, maybe) -> maybe?.let { rx to it } }
-
-        ui.value.merchant.takeIf { it.isNotBlank() }?.let { tryAutoCategorize(it) }
-    }
-
-    private fun tryAutoCategorize(merchant: String) {
-        val match = autoCatRules.firstOrNull { it.first.containsMatchIn(merchant) }
-        if (match != null) {
-            val (_, catId) = match
-            _ui.update { it.copy(categoryId = catId) }
-        }
-    }*/
 
     fun onAmountChange(v: String) = _ui.update { it.copy(amountText = normalizeAmountInput(v)) }
     fun onTypeChange(v: TxType) = _ui.update { it.copy(type = v) }
@@ -87,19 +102,12 @@ class AddEditTransactionViewModel(
 
     fun onMerchantChange(v: String) {
         _ui.update { it.copy(merchant = v) }
-
-        viewModelScope.launch {
-            val s = v.trim()
-            val items = if (s.length >= 2) getMerchantSuggestions(s) else emptyList()
-            _ui.update { it.copy(merchantSuggestions = items) }
-        }
-
-        //tryAutoCategorize(v)
+        merchantQuery.value = v
     }
 
     fun onMerchantPick(s: String) {
         _ui.update { it.copy(merchant = s, merchantSuggestions = emptyList()) }
-        onMerchantChange(s)
+        merchantQuery.value = s
     }
 
     fun save(onSaved: () -> Unit) {
@@ -109,22 +117,35 @@ class AddEditTransactionViewModel(
             _ui.update { it.copy(error = strings[R.string.add_transaction_error_account_or_amount_invalid]) }
             return
         }
+
         viewModelScope.launch {
             _ui.update { it.copy(isSaving = true, error = null) }
+
+            val accountCurrency = ui.value.accounts
+                .firstOrNull { it.id == s.accountId }
+                ?.currency ?: Currency.getInstance(Locale.getDefault()).currencyCode
+
             val tx = Transaction(
                 id = System.currentTimeMillis(),
                 accountId = s.accountId,
                 type = s.type,
                 amountMinor = amountMinor,
-                currency = Currency.getInstance(Locale.getDefault()).currencyCode, //TODO: Agregar currency a la UI
+                currency = accountCurrency,
                 date = s.date,
                 categoryId = s.categoryId,
                 merchant = s.merchant.ifBlank { null },
                 note = s.note.ifBlank { null },
             )
-            runCatching { addTx(tx) }
-                .onSuccess { onSaved() }
-                .onFailure { e -> _ui.update { it.copy(isSaving = false, error = e.message ?: strings[R.string.add_transaction_error_default]) } }
+
+            val result = runCatching { io { addTx(tx) } }
+            _ui.update { it.copy(isSaving = false) }
+
+            result.onSuccess { onSaved() }
+                .onFailure { e ->
+                    _ui.update {
+                        it.copy(error = e.message ?: strings[R.string.add_transaction_error_default])
+                    }
+                }
         }
     }
 
@@ -146,4 +167,7 @@ class AddEditTransactionViewModel(
         val v = norm.toDoubleOrNull() ?: return 0
         return (v * 100.0).roundToLong()
     }
+
+    private suspend fun <T> io(block: suspend () -> T): T =
+        withContext(Dispatchers.IO) { block() }
 }

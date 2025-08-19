@@ -10,10 +10,12 @@ import com.warh.domain.use_cases.CanDeleteAccountUseCase
 import com.warh.domain.use_cases.DeleteAccountUseCase
 import com.warh.domain.use_cases.GetAccountsUseCase
 import com.warh.domain.use_cases.UpsertAccountUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Currency
@@ -50,7 +52,8 @@ class AccountsViewModel(
     init { refresh() }
 
     private fun refresh() = viewModelScope.launch {
-        _ui.update { it.copy(accounts = getAccounts()) }
+        val accounts = io { getAccounts() }
+        _ui.update { it.copy(accounts = accounts) }
     }
 
     fun startAdd() = _ui.update { it.copy(draft = AccountDraft()) }
@@ -94,7 +97,7 @@ class AccountsViewModel(
                 currency = d.currency,
                 balanceMinor = parseMinor(d.balanceText, d.currency)
             )
-            upsert(account)
+            io { upsert(account) }
             _ui.update { it.copy(draft = null) }
             refresh()
         }
@@ -102,11 +105,12 @@ class AccountsViewModel(
 
     fun delete(acc: Account, onBlocked: (String) -> Unit) {
         viewModelScope.launch {
-            if (!canDelete(acc.id)) {
+            val allowed = io { canDelete(acc.id) }
+            if (!allowed) {
                 onBlocked(strings[R.string.accounts_error_delete_blocked])
                 return@launch
             }
-            delete(acc.id)
+            io { delete(acc.id) }
             refresh()
         }
     }
@@ -136,4 +140,7 @@ class AccountsViewModel(
             .getOrDefault(2).coerceAtLeast(0)
         return BigDecimal(minor).movePointLeft(digits).stripTrailingZeros().toPlainString()
     }
+
+    private suspend fun <T> io(block: suspend () -> T): T =
+        withContext(Dispatchers.IO) { block() }
 }

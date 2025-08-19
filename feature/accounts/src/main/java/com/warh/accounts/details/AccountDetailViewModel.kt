@@ -8,11 +8,16 @@ import com.warh.domain.models.TxType
 import com.warh.domain.use_cases.GetAccountTransactionsUseCase
 import com.warh.domain.use_cases.GetAccountUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
+import com.warh.domain.use_cases.GetMonthlyCategorySpendUseCase
+import com.warh.domain.use_cases.GetMonthlySumsUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
@@ -57,7 +62,13 @@ class AccountDetailViewModel(
     private val getAccountTransactions: GetAccountTransactionsUseCase,
     private val getCategories: GetCategoriesUseCase,
     private val getAccount: GetAccountUseCase,
+    private val getMonthlySums: GetMonthlySumsUseCase,
+    private val getMonthlyCategorySpend: GetMonthlyCategorySpendUseCase
 ) : ViewModel() {
+
+    companion object {
+        private const val CURRENCY_DECIMALS = 2
+    }
 
     private val _state = MutableStateFlow(AccountDetailUiState())
     val state: StateFlow<AccountDetailUiState> = _state
@@ -65,42 +76,100 @@ class AccountDetailViewModel(
     private val zone = ZoneId.systemDefault()
     private fun today(): LocalDate = LocalDate.now(zone)
 
-    private val CURRENCY_DECIMALS = 2
+    private var loadJob: Job? = null
 
     fun load(accountId: Long, initial: PeriodFilter = PeriodFilter.Monthly) {
         _state.update {
-            it.copy(
-                isLoading = true,
-                accountId = accountId,
-                period = initial,
-            )
+            it.copy(isLoading = true, accountId = accountId, period = initial)
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val names: Map<Long, String> = runCatching {
-                getCategories.invoke().associate { it.id to it.name }
-            }.getOrNull() ?: emptyMap()
-
-            val accountName = runCatching {
-                getAccount.invoke(accountId)
-            }.getOrNull()?.name ?: "Cuenta #${accountId}"
-
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             val filter = buildFilter(initial)
-            val txs = getAccountTransactions(accountId, filter)
+            val ym = YearMonth.from(today())
 
-            val computed = compute(txs)
+            val (fromForSums, toForSums) = when (initial) {
+                is PeriodFilter.Monthly -> {
+                    val start = ym.minusMonths(5).atDay(1).atStartOfDay()
+                    val end   = ym.plusMonths(1).atDay(1).atStartOfDay()
+                    start to end
+                }
+                is PeriodFilter.Lifetime -> {
+                    null to LocalDateTime.of(today(), LocalTime.MAX)
+                }
+            }
+
+            val namesDef = async {
+                io { runCatching { getCategories().associate { c -> c.id to c.name } }.getOrDefault(emptyMap()) }
+            }
+            val accNameDef = async {
+                io { runCatching { getAccount(accountId)?.name }.getOrNull() ?: "Cuenta #$accountId" }
+            }
+            val txsDef = async {
+                io { getAccountTransactions(accountId, filter) }
+            }
+            val monthlyDtoDef = async {
+                io { getMonthlySums(fromForSums, toForSums, accountId) }
+            }
+            val byCatDtoDef = async {
+                if (initial is PeriodFilter.Monthly)
+                    io { getMonthlyCategorySpend(ym, accountId) }
+                else
+                    emptyList()
+            }
+
+            val names = namesDef.await()
+            val accountName = accNameDef.await()
+            val txs = txsDef.await()
+            val monthlyDto = monthlyDtoDef.await()
+            val byCatDto = byCatDtoDef.await()
+
+            val monthly = monthlyDto.map { d ->
+                MonthlyBucket(
+                    month = YearMonth.parse(d.yearMonth),
+                    incomeMajor = d.incomeMinor.toMajor(CURRENCY_DECIMALS),
+                    expenseMajor = d.expenseMinor.toMajor(CURRENCY_DECIMALS)
+                )
+            }
+
+            val totalIncomeMajor = monthlyDto.sumOf { it.incomeMinor }.toMajor(CURRENCY_DECIMALS)
+            val totalExpenseMajor = monthlyDto.sumOf { it.expenseMinor }.toMajor(CURRENCY_DECIMALS)
+            val balanceMajor = totalIncomeMajor.subtract(totalExpenseMajor)
+
+            val thisMExp = monthly.lastOrNull()?.expenseMajor ?: BigDecimal.ZERO
+            val prevMExp = monthly.dropLast(1).lastOrNull()?.expenseMajor ?: BigDecimal.ZERO
+            val insightMoMDeltaPct =
+                if (prevMExp > BigDecimal.ZERO)
+                    thisMExp.subtract(prevMExp).multiply(BigDecimal(100)).divide(prevMExp, 2, RoundingMode.HALF_UP)
+                else null
+
+            val categoryDistribution =
+                if (initial is PeriodFilter.Monthly && byCatDto.isNotEmpty()) {
+                    byCatDto.map { d ->
+                        CategoryDistribution(d.categoryId, d.spentMinor.toMajor(CURRENCY_DECIMALS))
+                    }
+                } else {
+                    txs.filter { it.type == TxType.EXPENSE }
+                        .groupBy { it.categoryId }
+                        .map { (catId, list) -> CategoryDistribution(catId, list.sumOfMinor().toMajor(CURRENCY_DECIMALS)) }
+                        .sortedByDescending { it.totalMajor }
+                }
+
+            val insightTopCategoryId =
+                if (initial is PeriodFilter.Monthly && byCatDto.isNotEmpty()) byCatDto.first().categoryId
+                else categoryDistribution.firstOrNull()?.categoryId
 
             _state.update { prev ->
                 prev.copy(
                     isLoading = false,
-                    totalIncomeMajor = computed.totalIncomeMajor,
-                    totalExpenseMajor = computed.totalExpenseMajor,
-                    balanceMajor = computed.balanceMajor,
-                    categoryDistribution = computed.categoryDistribution,
-                    monthly = computed.monthly,
+                    totalIncomeMajor = totalIncomeMajor,
+                    totalExpenseMajor = totalExpenseMajor,
+                    balanceMajor = balanceMajor,
+                    categoryDistribution = categoryDistribution,
+                    monthly = monthly,
                     transactions = txs,
-                    insightTopCategoryId = computed.topCategoryId,
-                    insightMoMDeltaPct = computed.momDeltaPct,
+                    insightTopCategoryId = insightTopCategoryId,
+                    insightMoMDeltaPct = insightMoMDeltaPct,
                     categoryNames = names,
                     accountName = accountName
                 )
@@ -130,74 +199,14 @@ class AccountDetailViewModel(
         }
     }
 
-    private data class ComputeResult(
-        val totalIncomeMajor: BigDecimal,
-        val totalExpenseMajor: BigDecimal,
-        val balanceMajor: BigDecimal,
-        val categoryDistribution: List<CategoryDistribution>,
-        val monthly: List<MonthlyBucket>,
-        val topCategoryId: Long?,
-        val momDeltaPct: BigDecimal?
-    )
-
-    private fun compute(periodTxs: List<Transaction>): ComputeResult {
-        val totalIncomeMinor = periodTxs.filter { it.type == TxType.INCOME }.sumOfMinor()
-        val totalExpenseMinor = periodTxs.filter { it.type == TxType.EXPENSE }.sumOfMinor()
-        val balanceMinor = totalIncomeMinor - totalExpenseMinor
-
-        val byCategoryMinor: List<Pair<Long?, Long>> = periodTxs
-            .filter { it.type == TxType.EXPENSE }
-            .groupBy { it.categoryId }
-            .map { (catId, txs) -> catId to txs.sumOfMinor() }
-            .sortedByDescending { it.second }
-
-        val last6 = generateSequence(YearMonth.from(today())) { it.minusMonths(1) }
-            .take(6).toList().reversed()
-
-        val monthlyMinor = last6.map { ym ->
-            val inMonth = periodTxs.filter { YearMonth.from(it.date.toLocalDate()) == ym }
-            val incomeM = inMonth.filter { it.type == TxType.INCOME }.sumOfMinor()
-            val expenseM = inMonth.filter { it.type == TxType.EXPENSE }.sumOfMinor()
-            Triple(ym, incomeM, expenseM)
-        }
-
-        val thisMExp = monthlyMinor.lastOrNull()?.third ?: 0L
-        val prevMExp = monthlyMinor.dropLast(1).lastOrNull()?.third ?: 0L
-        val momDeltaPct: BigDecimal? =
-            if (prevMExp > 0L) {
-                val diff = thisMExp - prevMExp
-                BigDecimal(diff).multiply(BigDecimal(100))
-                    .divide(BigDecimal(prevMExp), 2, RoundingMode.HALF_UP)
-            } else null
-
-        return ComputeResult(
-            totalIncomeMajor = totalIncomeMinor.toMajor(CURRENCY_DECIMALS),
-            totalExpenseMajor = totalExpenseMinor.toMajor(CURRENCY_DECIMALS),
-            balanceMajor = balanceMinor.toMajor(CURRENCY_DECIMALS),
-            categoryDistribution = byCategoryMinor.map { (catId, sumMinor) ->
-                CategoryDistribution(catId, sumMinor.toMajor(CURRENCY_DECIMALS))
-            },
-            monthly = monthlyMinor.map { (ym, inc, exp) ->
-                MonthlyBucket(
-                    month = ym,
-                    incomeMajor = inc.toMajor(CURRENCY_DECIMALS),
-                    expenseMajor = exp.toMajor(CURRENCY_DECIMALS)
-                )
-            },
-            topCategoryId = byCategoryMinor.firstOrNull()?.first,
-            momDeltaPct = momDeltaPct
-        )
-    }
-
     private fun Iterable<Transaction>.sumOfMinor(): Long {
         var acc = 0L
         for (t in this) acc += t.amountMinor
         return acc
     }
 
-    private fun Long.toMajor(decimals: Int): BigDecimal =
-        BigDecimal.valueOf(this).movePointLeft(decimals)
+    private fun Long.toMajor(decimals: Int): BigDecimal = BigDecimal.valueOf(this).movePointLeft(decimals)
 
-    private operator fun BigDecimal.plus(other: BigDecimal) = this.add(other)
-    private operator fun BigDecimal.minus(other: BigDecimal) = this.subtract(other)
+    private suspend fun <T> io(block: suspend () -> T): T =
+        withContext(Dispatchers.IO) { block() }
 }

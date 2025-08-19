@@ -50,11 +50,14 @@ fun buildDatabase(context: Context): AppDatabase =
                 db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (2,'Transporte',0xFF64B5F6)")
                 db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (3,'Hogar',0xFF81C784)")
 
-                val now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                val now = LocalDateTime.now()
+                val nowStr = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                val ymStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+
                 db.execSQL(
                     """
-                    INSERT INTO transactions(id,accountId,type,amountMinor,currency,date,categoryId,merchant,note)
-                    VALUES (1001,1,'EXPENSE',12500,'ARS','$now',1,'Café','Latte y medialuna')
+                    INSERT INTO transactions(id,accountId,type,amountMinor,currency,date,yearMonth,categoryId,merchant,note)
+                    VALUES (1001,1,'EXPENSE',12500,'ARS','$nowStr','$ymStr',1,'Café','Latte y medialuna')
                     """.trimIndent()
                 )
             }
