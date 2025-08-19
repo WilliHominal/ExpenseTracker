@@ -22,4 +22,7 @@ dependencies {
     api(libs.androidx.paging.common)
 
     implementation(libs.kotlinx.coroutines.core)
+
+    // Testing
+    testImplementation(libs.junit4)
 }

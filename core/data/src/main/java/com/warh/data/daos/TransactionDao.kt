@@ -17,8 +17,14 @@ interface TransactionDao {
         """
             SELECT * FROM transactions
             WHERE (:from IS NULL OR date >= :from)
-              AND (:to   IS NULL OR date  < :to)
-              AND (:text IS NULL OR LOWER(merchant) LIKE '%'||:text||'%' OR LOWER(note) LIKE '%'||:text||'%')
+              AND (:to   IS NULL OR date  <  :to)
+              AND (
+                    :text IS NULL
+                 OR  LOWER(merchant) LIKE '%'||:text||'%'
+                 OR  LOWER(note)     LIKE '%'||:text||'%'
+              )
+              AND ( :accountIds IS NULL  OR accountId IN (:accountIds) )
+              AND ( :categoryIds IS NULL OR (categoryId IS NOT NULL AND categoryId IN (:categoryIds)) )
             ORDER BY date DESC
         """
     )
@@ -26,6 +32,8 @@ interface TransactionDao {
         from: LocalDateTime?,
         to: LocalDateTime?,
         text: String?,
+        accountIds: List<Long>?,
+        categoryIds: List<Long>?
     ): PagingSource<Int, TransactionEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

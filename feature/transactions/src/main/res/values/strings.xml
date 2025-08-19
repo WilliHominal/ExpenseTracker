@@ -7,6 +7,11 @@
     <string name="transactions_title">Transactions</string>
     <string name="transactions_export_cd">Export</string>
     <string name="transactions_transaction_default_name">Transaction</string>
+    <string name="transactions_row_support">%1$s • %2$s</string>
+    <string name="transactions_search_label">Search</string>
+    <string name="transactions_this_month">Current Month</string>
+    <string name="transactions_all_time">All</string>
+    <string name="transactions_clear_filters">Clear</string>
 
     <string name="add_transaction_error_account_or_amount_invalid">Amount and account are required</string>
     <string name="add_transaction_error_default">An error has occurred</string>

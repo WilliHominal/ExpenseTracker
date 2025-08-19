@@ -7,7 +7,10 @@ plugins {
 android {
     namespace = "com.warh.accounts"
     compileSdk = 35
-    defaultConfig { minSdk = 26 }
+    defaultConfig {
+        minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
     buildFeatures { compose = true }
 
     compileOptions {
@@ -30,4 +33,11 @@ dependencies {
 
     implementation(libs.androidx.paging.compose)
     implementation(libs.koin.androidx.compose)
+    implementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.tooling.preview)
+
+    // Testing
+    testImplementation(libs.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
 }

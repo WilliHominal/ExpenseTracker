@@ -26,7 +26,13 @@ class TransactionRepositoryImpl(
                 enablePlaceholders = false
             ),
             pagingSourceFactory = {
-                db.transactionDao().paging(filter.from, filter.to, filter.text)
+                db.transactionDao().paging(
+                    from = filter.from,
+                    to   = filter.to,
+                    text = filter.text?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
+                    accountIds  = filter.accountIds.takeIf { it.isNotEmpty() }?.toList(),
+                    categoryIds = filter.categoryIds.takeIf { it.isNotEmpty() }?.toList(),
+                )
             }
         ).flow
         .map { paging -> paging.map { it.toDomain() } }

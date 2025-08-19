@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.Currency
 import java.util.Locale
+import kotlin.math.pow
 import kotlin.math.roundToLong
 
 data class TxEditorUiState(
@@ -93,7 +94,14 @@ class AddEditTransactionViewModel(
         }
     }
 
-    fun onAmountChange(v: String) = _ui.update { it.copy(amountText = normalizeAmountInput(v)) }
+    fun onAmountChange(v: String) = _ui.update { st ->
+        val code = st.accounts.firstOrNull { it.id == st.accountId }?.currency
+            ?: Currency.getInstance(Locale.getDefault()).currencyCode
+        val decimals = runCatching { Currency.getInstance(code).defaultFractionDigits }
+            .getOrDefault(2).coerceAtLeast(0)
+
+        st.copy(amountText = normalizeAmountInput(v, decimals))
+    }
     fun onTypeChange(v: TxType) = _ui.update { it.copy(type = v) }
     fun onAccountChange(id: Long) = _ui.update { it.copy(accountId = id) }
     fun onCategoryChange(id: Long?) = _ui.update { it.copy(categoryId = id) }
@@ -112,11 +120,6 @@ class AddEditTransactionViewModel(
 
     fun save(onSaved: () -> Unit) {
         val s = ui.value
-        val amountMinor = parseAmountMinor(s.amountText)
-        if (amountMinor <= 0 || s.accountId == null) {
-            _ui.update { it.copy(error = strings[R.string.add_transaction_error_account_or_amount_invalid]) }
-            return
-        }
 
         viewModelScope.launch {
             _ui.update { it.copy(isSaving = true, error = null) }
@@ -124,6 +127,15 @@ class AddEditTransactionViewModel(
             val accountCurrency = ui.value.accounts
                 .firstOrNull { it.id == s.accountId }
                 ?.currency ?: Currency.getInstance(Locale.getDefault()).currencyCode
+
+            val decimals = runCatching { Currency.getInstance(accountCurrency).defaultFractionDigits }
+                .getOrDefault(2).coerceAtLeast(0)
+
+            val amountMinor = parseAmountMinor(s.amountText, decimals)
+            if (amountMinor <= 0 || s.accountId == null) {
+                _ui.update { it.copy(error = strings[R.string.add_transaction_error_account_or_amount_invalid]) }
+                return@launch
+            }
 
             val tx = Transaction(
                 id = System.currentTimeMillis(),
@@ -150,22 +162,28 @@ class AddEditTransactionViewModel(
     }
 
     // --- Helpers ---
-    private fun normalizeAmountInput(raw: String): String {
+    private fun normalizeAmountInput(raw: String, decimals: Int): String {
         val filtered = raw.filter { it.isDigit() || it == '.' || it == ',' }
         var s = filtered.replace(',', '.')
+
+        if (decimals == 0) {
+            return s.takeWhile { it.isDigit() }.ifEmpty { "0" }
+        }
+
         val firstDot = s.indexOf('.')
         if (firstDot >= 0) {
             val intPart = s.substring(0, firstDot).ifEmpty { "0" }
-            val fracPart = s.substring(firstDot + 1).take(2)
+            val fracPart = s.substring(firstDot + 1).take(decimals)
             s = if (fracPart.isEmpty()) "$intPart." else "$intPart.$fracPart"
         }
         return s
     }
 
-    private fun parseAmountMinor(input: String): Long {
+    private fun parseAmountMinor(input: String, decimals: Int): Long {
         val norm = input.replace(',', '.')
         val v = norm.toDoubleOrNull() ?: return 0
-        return (v * 100.0).roundToLong()
+        val factor = 10.0.pow(decimals.toDouble())
+        return (v * factor).roundToLong()
     }
 
     private suspend fun <T> io(block: suspend () -> T): T =
