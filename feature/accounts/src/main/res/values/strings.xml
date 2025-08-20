@@ -24,6 +24,7 @@
     <string name="accounts_error_delete_blocked">Cannot delete: the account has transactions.</string>
 
     <!-- Account detail -->
+    <string name="account_detail_default_name">Account #%1$s</string>
     <string name="account_detail_cd_back">Back</string>
 
     <string name="account_detail_period_monthly">Monthly</string>

@@ -110,7 +110,16 @@ private fun AccountDetailScreen(
     onPeriodChange: (PeriodFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val currency = remember { NumberFormat.getCurrencyInstance(Locale("es","AR")) }
+    val currency = remember(state.accountCurrencyCode, Locale.getDefault()) {
+        val curr = runCatching { java.util.Currency.getInstance(state.accountCurrencyCode) }
+            .getOrElse { java.util.Currency.getInstance(Locale.getDefault()) }
+        NumberFormat.getCurrencyInstance().apply {
+            currency = curr
+            val digits = curr.defaultFractionDigits.coerceAtLeast(0)
+            maximumFractionDigits = digits
+            minimumFractionDigits = digits
+        }
+    }
 
     Column(
         modifier = modifier
@@ -251,7 +260,7 @@ private fun BarChart(state: AccountDetailUiState, height: Dp = 140.dp) {
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             state.monthly.forEach { m ->
-                val label = m.month.month.getDisplayName(TextStyle.SHORT, Locale("es","AR"))
+                val label = m.month.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())
                 Text(label, style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -273,14 +282,31 @@ private fun BarChart(state: AccountDetailUiState, height: Dp = 140.dp) {
 
 @Composable
 private fun TransactionRow(tx: Transaction) {
-    val currency = remember { NumberFormat.getCurrencyInstance(Locale("es","AR")) }
+    val curr = remember(tx.currency) {
+        runCatching { java.util.Currency.getInstance(tx.currency) }
+            .getOrElse { java.util.Currency.getInstance(Locale.getDefault()) }
+    }
+    val digits = curr.defaultFractionDigits.coerceAtLeast(0)
 
-    val major = BigDecimal.valueOf(tx.amountMinor).movePointLeft(2)
+    val amountMajor = remember(tx.amountMinor, curr) {
+        BigDecimal.valueOf(tx.amountMinor).movePointLeft(digits)
+    }
 
-    val color = if (tx.type == TxType.INCOME) Color(0xFF2E7D32)
-    else Color(0xFFC62828)
+    val amountFmt = remember(curr, Locale.getDefault()) {
+        NumberFormat.getCurrencyInstance().apply {
+            currency = curr
+            maximumFractionDigits = digits
+            minimumFractionDigits = digits
+        }
+    }
 
-    val df = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm") }
+    val dateFmt = remember(Locale.getDefault()) {
+        DateTimeFormatter
+            .ofLocalizedDateTime(java.time.format.FormatStyle.MEDIUM)
+            .withLocale(Locale.getDefault())
+    }
+
+    val color = if (tx.type == TxType.INCOME) Color(0xFF2E7D32) else Color(0xFFC62828)
 
     ElevatedCard {
         Row(
@@ -294,15 +320,14 @@ private fun TransactionRow(tx: Transaction) {
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-
                 Text(
-                    text = tx.date.format(df),
+                    text = tx.date.format(dateFmt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
-                text = currency.format(major),
+                text = amountFmt.format(amountMajor),
                 style = MaterialTheme.typography.bodyLarge,
                 color = color,
                 fontWeight = FontWeight.Bold
