@@ -39,6 +39,9 @@ class TransactionsViewModel(
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories
 
+    private val _filtersVisible = MutableStateFlow(false)
+    val filtersVisible: StateFlow<Boolean> = _filtersVisible
+
     init {
         viewModelScope.launch {
             val (accs, cats) = io {
@@ -69,7 +72,9 @@ class TransactionsViewModel(
         val s = it.categoryIds.toMutableSet().also { set -> if (!set.add(id)) set.remove(id) }
         it.copy(categoryIds = s)
     }
-    fun clearFilters() { _filter.value = TransactionFilter() }
+
+    fun toggleFiltersVisible() { _filtersVisible.update { !it } }
+    fun setFiltersVisible(visible: Boolean) { _filtersVisible.value = visible }
 
     private fun TransactionFilter.normalize(): TransactionFilter =
         copy(text = text?.trim()?.lowercase()?.takeIf { it.isNotEmpty() })

@@ -1,5 +1,9 @@
 package com.warh.transactions
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -26,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -35,6 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.warh.commons.DateUtils.formatDateTime
+import com.warh.commons.NumberUtils.formatAmountWithCode
 import com.warh.commons.TopBarDefault
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
@@ -43,8 +51,6 @@ import com.warh.domain.models.Category
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TransactionFilter
 import com.warh.domain.models.TxType
-import com.warh.transactions.utils.formatAmountMajor
-import com.warh.transactions.utils.formatDateTime
 import kotlinx.coroutines.flow.flowOf
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDateTime
@@ -60,6 +66,7 @@ fun TransactionsRoute(
     val filter by vm.filter.collectAsStateWithLifecycle()
     val accounts by vm.accounts.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
+    val filtersVisible by vm.filtersVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     TransactionsScreen(
@@ -67,11 +74,12 @@ fun TransactionsRoute(
         accounts = accounts,
         categories = categories,
         pagingItems = pagingItems,
+        filtersVisible = filtersVisible,
+        onToggleFilters = vm::toggleFiltersVisible,
         onQueryChange = vm::setText,
         onDateRangeChange = vm::setDateRange,
         onToggleAccount = vm::toggleAccount,
         onToggleCategory = vm::toggleCategory,
-        onClear = vm::clearFilters,
         onAddClick = onAddClick,
         onExportClick = { vmExport.exportCsv(context, filter) }
     )
@@ -83,11 +91,12 @@ fun TransactionsScreen(
     accounts: List<Account>,
     categories: List<Category>,
     pagingItems: LazyPagingItems<Transaction>,
+    filtersVisible: Boolean,
+    onToggleFilters: () -> Unit,
     onQueryChange: (String) -> Unit,
     onDateRangeChange: (LocalDateTime?, LocalDateTime?) -> Unit,
     onToggleAccount: (Long) -> Unit,
     onToggleCategory: (Long) -> Unit,
-    onClear: () -> Unit,
     onAddClick: () -> Unit,
     onExportClick: () -> Unit
 ) {
@@ -97,7 +106,16 @@ fun TransactionsScreen(
                 title = stringResource(R.string.transactions_title),
                 actions = {
                     IconButton(onClick = onExportClick) {
-                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.transactions_title))
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = stringResource(R.string.transactions_export_cd)
+                        )
+                    }
+                    IconButton(onClick = onToggleFilters) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.transactions_filter_cd),
+                        )
                     }
                 },
             )
@@ -115,16 +133,21 @@ fun TransactionsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            FilterBar(
-                filter = filter,
-                accounts = accounts,
-                categories = categories,
-                onQueryChange = onQueryChange,
-                onDateRangeChange = onDateRangeChange,
-                onToggleAccount = onToggleAccount,
-                onToggleCategory = onToggleCategory,
-                onClear = onClear
-            )
+            AnimatedVisibility(
+                visible = filtersVisible,
+                enter = expandVertically(expandFrom = Alignment.Top, animationSpec = tween(150)),
+                exit = ExitTransition.None
+            ) {
+                FilterBar(
+                    filter = filter,
+                    accounts = accounts,
+                    categories = categories,
+                    onQueryChange = onQueryChange,
+                    onDateRangeChange = onDateRangeChange,
+                    onToggleAccount = onToggleAccount,
+                    onToggleCategory = onToggleCategory,
+                )
+            }
 
             LazyColumn(Modifier.fillMaxSize()) {
                 items(
@@ -149,7 +172,6 @@ private fun FilterBar(
     onDateRangeChange: (LocalDateTime?, LocalDateTime?) -> Unit,
     onToggleAccount: (Long) -> Unit,
     onToggleCategory: (Long) -> Unit,
-    onClear: () -> Unit
 ) {
     Column(Modifier
         .fillMaxWidth()
@@ -199,17 +221,13 @@ private fun FilterBar(
                 )
             }
         }
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onClear) { Text(stringResource(R.string.transactions_clear_filters)) }
-        }
     }
 }
 
 @Composable
 private fun TransactionRow(tx: Transaction) {
     val amountText = remember(tx.amountMinor, tx.currency) {
-        formatAmountMajor(tx.amountMinor, tx.currency)
+        formatAmountWithCode(tx.amountMinor, tx.currency)
     }
     val dateText = remember(tx.date) {
         formatDateTime(tx.date)
@@ -261,11 +279,12 @@ fun TransactionsScreenPreviewDark() {
             accounts = sampleAccounts,
             categories = sampleCategories,
             pagingItems = pagingItems,
+            filtersVisible = true,
+            onToggleFilters = {},
             onQueryChange = {},
             onDateRangeChange = { _, _ -> },
             onToggleAccount = {},
             onToggleCategory = {},
-            onClear = {},
             onAddClick = {},
             onExportClick = {}
         )
@@ -307,11 +326,12 @@ fun TransactionsScreenPreviewLight() {
             accounts = sampleAccounts,
             categories = sampleCategories,
             pagingItems = pagingItems,
+            filtersVisible = true,
+            onToggleFilters = {},
             onQueryChange = {},
             onDateRangeChange = { _, _ -> },
             onToggleAccount = {},
             onToggleCategory = {},
-            onClear = {},
             onAddClick = {},
             onExportClick = {}
         )

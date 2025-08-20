@@ -6,6 +6,7 @@
 
     <string name="transactions_title">Transacciones</string>
     <string name="transactions_export_cd">Exportar</string>
+    <string name="transactions_filter_cd">Filtrar</string>
     <string name="transactions_transaction_default_name">Transacción</string>
     <string name="transactions_row_support">%1$s • %2$s</string>
     <string name="transactions_search_label">Buscar</string>

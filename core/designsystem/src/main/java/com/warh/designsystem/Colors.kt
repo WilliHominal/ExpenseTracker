@@ -3,7 +3,6 @@ package com.warh.designsystem
 import androidx.compose.ui.graphics.Color
 
 object ColorTokens {
-
     object Light {
         val Primary            = Color(0xFFD33E4C)
         val OnPrimary          = Color(0xFFFFFFFF)
@@ -42,9 +41,6 @@ object ColorTokens {
 
         val SurfaceTint         = Color(0xFFD33E4C)
         val Scrim               = Color(0x66000000)
-
-        val Success             = Color(0xFF2E7D32)
-        val Danger              = Color(0xFFC62828)
     }
 
     object Dark {
@@ -85,8 +81,5 @@ object ColorTokens {
 
         val SurfaceTint         = Color(0xFF232A33)
         val Scrim               = Color(0x99000000)
-
-        val Success             = Color(0xFF2E7D32)
-        val Danger              = Color(0xFFC62828)
     }
 }
