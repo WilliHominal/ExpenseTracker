@@ -5,4 +5,11 @@
     <string name="bottom_menu_budgets">Presupuestos</string>
     <string name="bottom_menu_categories">Categorías</string>
     <string name="bottom_menu_accounts">Cuentas</string>
+
+    <!-- Widget -->
+    <string name="widget_balance_label">Saldo</string>
+    <string name="widget_balance_title">Saldo Total</string>
+    <string name="widget_empty">-</string>
+    <string name="widget_open">Abrir</string>
+    <string name="widget_refresh">Actualizar</string>
 </resources>

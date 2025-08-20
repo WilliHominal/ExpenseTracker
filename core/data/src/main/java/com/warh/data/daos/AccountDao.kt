@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
 import com.warh.data.entities.AccountEntity
+import com.warh.domain.dto.CurrencyTotalRow
 
 @Dao
 interface AccountDao {
@@ -21,4 +22,11 @@ interface AccountDao {
 
     @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :id")
     suspend fun txCountForAccount(id: Long): Int
+
+    @Query("""
+       SELECT currency, SUM(balanceMinor) AS totalMinor
+       FROM accounts
+       GROUP BY currency
+    """)
+    suspend fun totalsByCurrency(): List<CurrencyTotalRow>
 }

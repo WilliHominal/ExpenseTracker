@@ -21,9 +21,15 @@ import java.math.RoundingMode
 import java.util.Currency
 import java.util.Locale
 
+data class CurrencyTotalUi(
+    val currency: String,
+    val totalMinor: Long
+)
+
 data class AccountsUiState(
     val accounts: List<Account> = emptyList(),
-    val draft: AccountDraft? = null
+    val draft: AccountDraft? = null,
+    val totalsByCurrency: List<CurrencyTotalUi> = emptyList()
 )
 
 data class AccountDraft(
@@ -52,8 +58,18 @@ class AccountsViewModel(
     init { refresh() }
 
     private fun refresh() = viewModelScope.launch {
-        val accounts = io { getAccounts() }
-        _ui.update { it.copy(accounts = accounts) }
+        val accounts = getAccounts()
+        val totals = accounts
+            .groupBy { it.currency }
+            .map { (code, list) ->
+                CurrencyTotalUi(
+                    currency = code,
+                    totalMinor = list.sumOf { it.balanceMinor }
+                )
+            }
+            .sortedBy { it.currency }
+
+        _ui.update { it.copy(accounts = accounts, totalsByCurrency = totals) }
     }
 
     fun startAdd() = _ui.update { it.copy(draft = AccountDraft()) }

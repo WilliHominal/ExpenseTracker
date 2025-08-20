@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FloatingActionButton
@@ -48,6 +49,8 @@ import com.warh.commons.TopBarDefault
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import java.math.BigDecimal
+import java.util.Currency
 
 @Composable
 fun AccountsRoute(
@@ -71,6 +74,7 @@ fun AccountsRoute(
         snackbarHost = { SnackbarHost(snackBar) }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            CurrencyTotalsCard(ui.totalsByCurrency)
 
             ui.draft?.let { d ->
                 AccountEditorCard(
@@ -200,6 +204,25 @@ private fun AccountEditorCard(
                     onClick = onSave,
                     enabled = draft.name.isNotBlank()
                 ) { Text(stringResource(R.string.accounts_save)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CurrencyTotalsCard(totals: List<CurrencyTotalUi>, modifier: Modifier = Modifier) {
+    if (totals.isEmpty()) return
+    ElevatedCard(modifier.fillMaxWidth().padding(12.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.accounts_totals_title), style = MaterialTheme.typography.titleMedium)
+            totals.forEach { t ->
+                val digits = runCatching { Currency.getInstance(t.currency).defaultFractionDigits }
+                    .getOrDefault(2).coerceAtLeast(0)
+                val major = BigDecimal(t.totalMinor).movePointLeft(digits)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(t.currency, style = MaterialTheme.typography.bodyMedium)
+                    Text(major.toPlainString(), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
     }

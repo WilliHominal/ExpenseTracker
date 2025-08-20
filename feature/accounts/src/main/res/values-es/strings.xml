@@ -3,6 +3,8 @@
     <!-- Titles -->
     <string name="accounts_title">Cuentas</string>
 
+    <string name="accounts_totals_title">Saldo total</string>
+
     <!-- Editor fields -->
     <string name="accounts_name_label">Nombre de cuenta</string>
     <string name="accounts_type_label">Tipo</string>
