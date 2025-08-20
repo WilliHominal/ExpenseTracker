@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Titles -->
+    <string name="accounts_title">Cuentas</string>
+
     <!-- Editor fields -->
     <string name="accounts_name_label">Nombre de cuenta</string>
     <string name="accounts_type_label">Tipo</string>
@@ -19,4 +22,27 @@
     <!-- Errors -->
     <string name="accounts_error_name_required">El nombre es obligatorio</string>
     <string name="accounts_error_delete_blocked">No se puede eliminar: la cuenta tiene movimientos.</string>
+
+    <!-- Account detail -->
+    <string name="account_detail_cd_back">Volver</string>
+
+    <string name="account_detail_period_monthly">Mensual</string>
+    <string name="account_detail_period_lifetime">Todo el tiempo</string>
+
+    <string name="account_detail_income_title">Ingresos</string>
+    <string name="account_detail_expense_title">Gastos</string>
+    <string name="account_detail_balance_title">Balance</string>
+
+    <string name="account_detail_insight_top_category">Categoría con más gasto: %1$s</string>
+    <string name="account_detail_no_category">Sin categoría</string>
+    <string name="account_detail_insight_mom_delta">Variación de gasto vs mes anterior: %1$s%%</string>
+
+    <string name="account_detail_chart_title">Ingresos vs. Gastos (últimos meses)</string>
+    <string name="account_detail_distribution_title">Distribución por categoría (gastos)</string>
+
+    <string name="account_detail_legend_income">Ingresos</string>
+    <string name="account_detail_legend_expense">Gastos</string>
+
+    <string name="account_detail_transactions_title">Transacciones</string>
+    <string name="account_detail_transaction_fallback">Transacción</string>
 </resources>

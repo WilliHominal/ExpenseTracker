@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="categories_title">Categorías</string>
     <string name="categories_error_name_required">El nombre es requerido</string>
     <string name="categories_error_delete_blocked">No se puede eliminar: tiene movimientos o presupuestos.</string>
 

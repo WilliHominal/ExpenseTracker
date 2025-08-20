@@ -35,7 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,13 +42,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.accounts.R
 import com.warh.commons.TopBarDefault
+import com.warh.domain.models.Transaction
+import com.warh.domain.models.TxType
 import org.koin.androidx.compose.koinViewModel
 import java.math.BigDecimal
 import java.text.NumberFormat
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.min
@@ -60,7 +65,7 @@ fun AccountDetailRoute(
     onBack: () -> Unit,
     vm: AccountDetailViewModel = koinViewModel()
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(accountId) { vm.load(accountId) }
 
     Scaffold(
@@ -71,7 +76,7 @@ fun AccountDetailRoute(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = stringResource(R.string.account_detail_cd_back)
                         )
                     }
                 },
@@ -118,36 +123,40 @@ private fun AccountDetailScreen(
             FilterChip(
                 selected = state.period is PeriodFilter.Monthly,
                 onClick = { onPeriodChange(PeriodFilter.Monthly) },
-                label = { Text("Mensual") }
+                label = { Text(stringResource(R.string.account_detail_period_monthly)) }
             )
             FilterChip(
                 selected = state.period is PeriodFilter.Lifetime,
                 onClick = { onPeriodChange(PeriodFilter.Lifetime) },
-                label = { Text("Lifetime") }
+                label = { Text(stringResource(R.string.account_detail_period_lifetime)) }
             )
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SummaryCard("Ingresos", state.totalIncomeMajor, currency) {
+            SummaryCard(stringResource(R.string.account_detail_income_title), state.totalIncomeMajor, currency) {
                 Icon(Icons.Default.KeyboardArrowUp, null, tint = Color(0xFF2E7D32))
             }
-            SummaryCard("Gastos", state.totalExpenseMajor, currency) {
+            SummaryCard(stringResource(R.string.account_detail_expense_title), state.totalExpenseMajor, currency) {
                 Icon(Icons.Default.KeyboardArrowDown, null, tint = Color(0xFFC62828))
             }
-            SummaryCard("Balance", state.balanceMajor, currency, emphasize = true)
+            SummaryCard(stringResource(R.string.account_detail_balance_title), state.balanceMajor, currency, emphasize = true)
         }
 
         if (state.insightTopCategoryId != null || state.insightMoMDeltaPct != null) {
             ElevatedCard {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     state.insightTopCategoryId?.let { topId ->
-                        val label = state.categoryNames[topId] ?: "Sin categoría"
-                        Text("Categoría con más gasto: $label")
+                        val label = state.categoryNames[topId] ?: stringResource(R.string.account_detail_no_category)
+                        Text(stringResource(R.string.account_detail_insight_top_category, label))
                     }
                     state.insightMoMDeltaPct?.let { pct ->
                         val color = if (pct >= BigDecimal.ZERO) Color(0xFFC62828) else Color(0xFF2E7D32)
                         val sign = if (pct >= BigDecimal.ZERO) "+" else ""
-                        Text("Variación de gasto vs mes anterior: $sign$pct%", color = color)
+                        val pctAbs = pct.abs().toPlainString()
+                        Text(
+                            text = stringResource(R.string.account_detail_insight_mom_delta, sign + pctAbs),
+                            color = color
+                        )
                     }
                 }
             }
@@ -155,7 +164,7 @@ private fun AccountDetailScreen(
 
         ElevatedCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Ingresos vs. Gastos (últimos meses)", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.account_detail_chart_title), style = MaterialTheme.typography.titleMedium)
                 BarChart(state)
             }
         }
@@ -163,11 +172,10 @@ private fun AccountDetailScreen(
         if (state.categoryDistribution.isNotEmpty()) {
             ElevatedCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Distribución por categoría (gastos)", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.account_detail_distribution_title), style = MaterialTheme.typography.titleMedium)
                     state.categoryDistribution.take(6).forEach { dist ->
-                        val label = dist.categoryId?.let { id ->
-                            state.categoryNames[id]
-                        } ?: "Sin categoría"
+                        val label = dist.categoryId?.let { id -> state.categoryNames[id] }
+                            ?: stringResource(R.string.account_detail_no_category)
 
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(label, style = MaterialTheme.typography.bodyMedium)
@@ -178,7 +186,7 @@ private fun AccountDetailScreen(
             }
         }
 
-        Text("Transacciones", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.account_detail_transactions_title), style = MaterialTheme.typography.titleMedium)
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -249,8 +257,8 @@ private fun BarChart(state: AccountDetailUiState, height: Dp = 140.dp) {
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            LegendDot(Color(0xFF2E7D32), "Ingresos")
-            LegendDot(Color(0xFFC62828), "Gastos")
+            LegendDot(Color(0xFF2E7D32), stringResource(R.string.account_detail_legend_income))
+            LegendDot(Color(0xFFC62828), stringResource(R.string.account_detail_legend_expense))
         }
     }
 }
@@ -264,15 +272,15 @@ private fun BarChart(state: AccountDetailUiState, height: Dp = 140.dp) {
 }
 
 @Composable
-private fun TransactionRow(tx: com.warh.domain.models.Transaction) {
+private fun TransactionRow(tx: Transaction) {
     val currency = remember { NumberFormat.getCurrencyInstance(Locale("es","AR")) }
 
     val major = BigDecimal.valueOf(tx.amountMinor).movePointLeft(2)
 
-    val color = if (tx.type == com.warh.domain.models.TxType.INCOME) Color(0xFF2E7D32)
+    val color = if (tx.type == TxType.INCOME) Color(0xFF2E7D32)
     else Color(0xFFC62828)
 
-    val df = remember { java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm") }
+    val df = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm") }
 
     ElevatedCard {
         Row(
@@ -281,10 +289,24 @@ private fun TransactionRow(tx: com.warh.domain.models.Transaction) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(tx.merchant ?: tx.note ?: "Transacción", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text(tx.date.format(df), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = tx.merchant ?: tx.note ?: stringResource(R.string.account_detail_transaction_fallback),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Text(
+                    text = tx.date.format(df),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Text(currency.format(major), style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Bold)
+            Text(
+                text = currency.format(major),
+                style = MaterialTheme.typography.bodyLarge,
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

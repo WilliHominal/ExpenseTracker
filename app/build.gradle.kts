@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":feature:categories"))
 
     // Compose UI
+    implementation(libs.androidx.animation)
     implementation(libs.google.material)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)

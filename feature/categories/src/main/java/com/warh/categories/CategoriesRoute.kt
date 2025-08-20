@@ -30,7 +30,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,23 +37,58 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.commons.TopBarDefault
+import com.warh.designsystem.ExpenseTheme
+import com.warh.domain.models.Category
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
-    val ui by vm.ui.collectAsState()
+    val ui by vm.ui.collectAsStateWithLifecycle()
+
+    CategoriesScreen(
+        ui = ui,
+        onStartAdd = vm::startAdd,
+        onName = vm::onName,
+        onColor = vm::onColor,
+        onCancel = vm::cancel,
+        onSave = vm::save,
+        onStartEdit = vm::startEdit,
+        onRemove = vm::remove
+    )
+}
+
+@Composable
+fun CategoriesScreen(
+    ui: CategoriesUiState,
+    onStartAdd: () -> Unit,
+    onName: (String) -> Unit,
+    onColor: (Long) -> Unit,
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+    onStartEdit: (Category) -> Unit,
+    onRemove: (Long, (String) -> Unit) -> Unit,
+) {
     val snackBar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        topBar = {
+            TopBarDefault(
+                title = stringResource(R.string.categories_title)
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = vm::startAdd,
+                onClick = onStartAdd,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) { Icon(Icons.Default.Add, null) } },
+            ) { Icon(Icons.Default.Add, null) }
+        },
         snackbarHost = { SnackbarHost(snackBar) }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -62,10 +96,10 @@ fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
             ui.draft?.let { d ->
                 CategoryEditorCard(
                     draft = d,
-                    onName = vm::onName,
-                    onColor = vm::onColor,
-                    onCancel = vm::cancel,
-                    onSave = vm::save
+                    onName = onName,
+                    onColor = onColor,
+                    onCancel = onCancel,
+                    onSave = onSave
                 )
                 HorizontalDivider()
             }
@@ -74,14 +108,22 @@ fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
                 items(ui.items, key = { it.id }) { c ->
                     ListItem(
                         leadingContent = {
-                            Surface(color = Color(c.colorArgb.toInt()), shape = MaterialTheme.shapes.small, modifier = Modifier.size(16.dp)) {}
+                            Surface(
+                                color = Color(c.colorArgb.toInt()),
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier.size(16.dp)
+                            ) {}
                         },
                         headlineContent = { Text(c.name) },
                         trailingContent = {
                             Row {
-                                TextButton(onClick = { vm.startEdit(c) }) { Text(stringResource(R.string.categories_edit_button)) }
+                                TextButton(onClick = { onStartEdit(c) }) {
+                                    Text(stringResource(R.string.categories_edit_button))
+                                }
                                 IconButton(onClick = {
-                                    vm.remove(c.id) { msg -> scope.launch { snackBar.showSnackbar(msg) } }
+                                    onRemove(c.id) { msg ->
+                                        scope.launch { snackBar.showSnackbar(msg) }
+                                    }
                                 }) { Icon(Icons.Default.Delete, null) }
                             }
                         }
@@ -149,3 +191,94 @@ private fun ColorGrid(selected: Long, onSelect: (Long) -> Unit) {
         }
     }
 }
+
+@Preview(name = "Categories — List (Light)", showBackground = true)
+@Composable
+fun CategoriesScreenPreview_List_Light() {
+    ExpenseTheme(dark = false) {
+        CategoriesScreen(
+            ui = uiListState(),
+            onStartAdd = {},
+            onName = {},
+            onColor = {},
+            onCancel = {},
+            onSave = {},
+            onStartEdit = {},
+            onRemove = { _, _ -> }
+        )
+    }
+}
+
+@Preview(name = "Categories — List (Dark)", showBackground = true)
+@Composable
+fun CategoriesScreenPreview_List_Dark() {
+    ExpenseTheme(dark = true) {
+        CategoriesScreen(
+            ui = uiListState(),
+            onStartAdd = {},
+            onName = {},
+            onColor = {},
+            onCancel = {},
+            onSave = {},
+            onStartEdit = {},
+            onRemove = { _, _ -> }
+        )
+    }
+}
+
+@Preview(name = "Categories — Draft (Light)", showBackground = true)
+@Composable
+fun CategoriesScreenPreview_Draft_Light() {
+    ExpenseTheme(dark = false) {
+        CategoriesScreen(
+            ui = uiDraftState(),
+            onStartAdd = {},
+            onName = {},
+            onColor = {},
+            onCancel = {},
+            onSave = {},
+            onStartEdit = {},
+            onRemove = { _, _ -> }
+        )
+    }
+}
+
+@Preview(name = "Categories — Draft (Dark)", showBackground = true)
+@Composable
+fun CategoriesScreenPreview_Draft_Dark() {
+    ExpenseTheme(dark = true) {
+        CategoriesScreen(
+            ui = uiDraftState(),
+            onStartAdd = {},
+            onName = {},
+            onColor = {},
+            onCancel = {},
+            onSave = {},
+            onStartEdit = {},
+            onRemove = { _, _ -> }
+        )
+    }
+}
+
+private fun sampleCategories(): List<Category> = listOf(
+    Category(1, "Comida",    0xFFE57373),
+    Category(2, "Transporte",0xFF64B5F6),
+    Category(3, "Hogar",     0xFF81C784),
+    Category(4, "Ocio",      0xFFFFB74D),
+)
+
+private fun uiListState() = CategoriesUiState(
+    items = sampleCategories(),
+    draft = null,
+    error = null
+)
+
+private fun uiDraftState() = CategoriesUiState(
+    items = sampleCategories(),
+    draft = CategoryDraft(
+        id = null,
+        name = "Nueva categoría",
+        colorArgb = 0xFF9E9E9E
+    ),
+    error = null
+)

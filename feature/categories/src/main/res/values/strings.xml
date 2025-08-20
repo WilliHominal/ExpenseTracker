@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="categories_title">Categories</string>
+
     <string name="categories_error_name_required">The name is required</string>
     <string name="categories_error_delete_blocked">Cannot delete: it has transactions or budgets.</string>
 

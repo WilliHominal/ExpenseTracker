@@ -24,7 +24,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.TopBarDefault
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
@@ -58,7 +58,7 @@ fun AddEditTransactionRoute(
     vm: AddEditTransactionViewModel = koinViewModel()
 ) {
 
-    val ui by vm.ui.collectAsState()
+    val ui by vm.ui.collectAsStateWithLifecycle()
 
     AddEditTransactionScreen(
         ui = ui,
@@ -121,6 +121,7 @@ fun AddEditTransactionScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
                 Text(
+                    modifier = Modifier.padding(horizontal = 24.dp),
                     text = stringResource(
                         if (ui.isSaving) R.string.add_transaction_save_button_loading
                         else R.string.add_transaction_save_button
