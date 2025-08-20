@@ -8,86 +8,85 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val Light = lightColorScheme(
-    primary = Color(0xFFD33E4C),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFFFD8DD),
-    onPrimaryContainer = Color(0xFF5F0B14),
+val LightScheme = lightColorScheme(
+    primary = ColorTokens.Light.Primary,
+    onPrimary = ColorTokens.Light.OnPrimary,
+    primaryContainer = ColorTokens.Light.PrimaryContainer,
+    onPrimaryContainer = ColorTokens.Light.OnPrimaryContainer,
 
-    secondary = Color(0xFF9E4A55),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFE6EA),
-    onSecondaryContainer = Color(0xFF4A1820),
+    secondary = ColorTokens.Light.Secondary,
+    onSecondary = ColorTokens.Light.OnSecondary,
+    secondaryContainer = ColorTokens.Light.SecondaryContainer,
+    onSecondaryContainer = ColorTokens.Light.OnSecondaryContainer,
 
-    tertiary = Color(0xFF56B8A6),
-    onTertiary = Color(0xFF003730),
-    tertiaryContainer = Color(0xFFBEF0E6),
-    onTertiaryContainer = Color(0xFF0A2C26),
+    tertiary = ColorTokens.Light.Tertiary,
+    onTertiary = ColorTokens.Light.OnTertiary,
+    tertiaryContainer = ColorTokens.Light.TertiaryContainer,
+    onTertiaryContainer = ColorTokens.Light.OnTertiaryContainer,
 
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
+    error = ColorTokens.Light.Error,
+    onError = ColorTokens.Light.OnError,
+    errorContainer = ColorTokens.Light.ErrorContainer,
+    onErrorContainer = ColorTokens.Light.OnErrorContainer,
 
-    background = Color(0xFFFFF3F5),
-    onBackground = Color(0xFF201A1C),
+    background = ColorTokens.Light.Background,
+    onBackground = ColorTokens.Light.OnBackground,
 
-    surface = Color(0xFFFFF7F8),
-    onSurface = Color(0xFF211A1C),
-    surfaceVariant = Color(0xFFF4D7DB),
-    onSurfaceVariant = Color(0xFF534346),
+    surface = ColorTokens.Light.Surface,
+    onSurface = ColorTokens.Light.OnSurface,
+    surfaceVariant = ColorTokens.Light.SurfaceVariant,
+    onSurfaceVariant = ColorTokens.Light.OnSurfaceVariant,
 
-    outline = Color(0xFF89686E),
-    outlineVariant = Color(0xFFDABCC1),
+    outline = ColorTokens.Light.Outline,
+    outlineVariant = ColorTokens.Light.OutlineVariant,
 
-    inverseSurface = Color(0xFF372E30),
-    inverseOnSurface = Color(0xFFFBEDEF),
-    inversePrimary = Color(0xFFFFB0B9),
-    surfaceTint = Color(0xFFD33E4C),
-    scrim = Color(0x66000000)
+    inverseSurface = ColorTokens.Light.InverseSurface,
+    inverseOnSurface = ColorTokens.Light.InverseOnSurface,
+    inversePrimary = ColorTokens.Light.InversePrimary,
+    surfaceTint = ColorTokens.Light.SurfaceTint,
+    scrim = ColorTokens.Light.Scrim
 )
 
-private val Dark = darkColorScheme(
-    primary = Color(0xFF3A424E),
-    onPrimary = Color(0xFFDDE3EA),
-    primaryContainer = Color(0xFF2C333D),
-    onPrimaryContainer = Color(0xFFDDE3EA),
+val DarkScheme = darkColorScheme(
+    primary = ColorTokens.Dark.Primary,
+    onPrimary = ColorTokens.Dark.OnPrimary,
+    primaryContainer = ColorTokens.Dark.PrimaryContainer,
+    onPrimaryContainer = ColorTokens.Dark.OnPrimaryContainer,
 
-    secondary = Color(0xFF3A424E),
-    onSecondary = Color(0xFFE6EBF2),
-    secondaryContainer = Color(0xFF343C48),
-    onSecondaryContainer = Color(0xFFD8DEE6),
+    secondary = ColorTokens.Dark.Secondary,
+    onSecondary = ColorTokens.Dark.OnSecondary,
+    secondaryContainer = ColorTokens.Dark.SecondaryContainer,
+    onSecondaryContainer = ColorTokens.Dark.OnSecondaryContainer,
 
-    tertiary = Color(0xFF3AA9A3),
-    onTertiary = Color(0xFF041F1E),
-    tertiaryContainer = Color(0xFF1E3B39),
-    onTertiaryContainer = Color(0xFFAEE7E2),
+    tertiary = ColorTokens.Dark.Tertiary,
+    onTertiary = ColorTokens.Dark.OnTertiary,
+    tertiaryContainer = ColorTokens.Dark.TertiaryContainer,
+    onTertiaryContainer = ColorTokens.Dark.OnTertiaryContainer,
 
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
+    error = ColorTokens.Dark.Error,
+    onError = ColorTokens.Dark.OnError,
+    errorContainer = ColorTokens.Dark.ErrorContainer,
+    onErrorContainer = ColorTokens.Dark.OnErrorContainer,
 
-    background = Color(0xFF0E1116),
-    onBackground = Color(0xFFE2E6EE),
+    background = ColorTokens.Dark.Background,
+    onBackground = ColorTokens.Dark.OnBackground,
 
-    surface = Color(0xFF141820),
-    onSurface = Color(0xFFE1E6EE),
-    surfaceVariant = Color(0xFF1C222B),
-    onSurfaceVariant = Color(0xFFBAC2CF),
+    surface = ColorTokens.Dark.Surface,
+    onSurface = ColorTokens.Dark.OnSurface,
+    surfaceVariant = ColorTokens.Dark.SurfaceVariant,
+    onSurfaceVariant = ColorTokens.Dark.OnSurfaceVariant,
 
-    outline = Color(0xFF435063),
-    outlineVariant = Color(0xFF303A46),
+    outline = ColorTokens.Dark.Outline,
+    outlineVariant = ColorTokens.Dark.OutlineVariant,
 
-    inverseSurface = Color(0xFFE6EAF0),
-    inverseOnSurface = Color(0xFF1A1F27),
-    inversePrimary = Color(0xFF8BA2BF),
+    inverseSurface = ColorTokens.Dark.InverseSurface,
+    inverseOnSurface = ColorTokens.Dark.InverseOnSurface,
+    inversePrimary = ColorTokens.Dark.InversePrimary,
 
-    surfaceTint = Color(0xFF232A33),
-    scrim = Color(0x99000000)
+    surfaceTint = ColorTokens.Dark.SurfaceTint,
+    scrim = ColorTokens.Dark.Scrim
 )
 
 @Composable
@@ -101,7 +100,7 @@ fun ExpenseTheme(
         if (dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         } else {
-            if (dark) Dark else Light
+            if (dark) DarkScheme else LightScheme
         }
 
     MaterialTheme(

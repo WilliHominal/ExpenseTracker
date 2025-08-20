@@ -8,6 +8,7 @@
     <!-- Widget -->
     <string name="widget_balance_label">Balance</string>
     <string name="widget_balance_title">Total Balance</string>
+    <string name="widget_more_currencies">+%1$d more</string>
     <string name="widget_empty">-</string>
     <string name="widget_open">Open App</string>
     <string name="widget_refresh">Refresh</string>

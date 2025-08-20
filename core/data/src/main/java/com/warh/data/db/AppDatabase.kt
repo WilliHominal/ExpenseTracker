@@ -43,8 +43,8 @@ fun buildDatabase(context: Context): AppDatabase =
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 //TODO - Sacar luego: Seed solo inicial
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor) VALUES (1,'Efectivo','CASH','ARS',0)")
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor) VALUES (2,'Banco','BANK','ARS',0)")
+                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor) VALUES (1,'Efectivo','CASH','ARS',12500)")
+                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor) VALUES (2,'Banco','BANK','USD',0)")
 
                 db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (1,'Comida',0xFFE57373)")
                 db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (2,'Transporte',0xFF64B5F6)")
@@ -56,8 +56,10 @@ fun buildDatabase(context: Context): AppDatabase =
 
                 db.execSQL(
                     """
-                    INSERT INTO transactions(id,accountId,type,amountMinor,currency,date,yearMonth,categoryId,merchant,note)
-                    VALUES (1001,1,'EXPENSE',12500,'ARS','$nowStr','$ymStr',1,'Café','Latte y medialuna')
+                    INSERT INTO transactions(id,accountId,type,amountMinor,currency,date,yearMonth,categoryId,merchant,note) VALUES
+                    (1001,1,'INCOME',25000,'ARS','$nowStr','$ymStr',3,'Sueldo','Sueldo del trabajo'),
+                    (1002,1,'EXPENSE',12500,'ARS','$nowStr','$ymStr',1,'Café','Latte y medialuna'),
+                    (1003,2,'INCOME',10000,'USD','$nowStr','$ymStr',3,'Transferencia','Recibo de dólares')
                     """.trimIndent()
                 )
             }
