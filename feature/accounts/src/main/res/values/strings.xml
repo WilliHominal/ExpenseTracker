@@ -21,6 +21,14 @@
     <string name="accounts_delete_cd">Delete account</string>
     <string name="accounts_item_meta">%1$s • %2$s</string>
 
+    <!-- Icons -->
+    <string name="accounts_icon_label">Icon</string>
+    <string name="accounts_color_label">Color</string>
+    <string name="accounts_color_custom">Custom</string>
+    <string name="accounts_color_picker_title">Choose color</string>
+    <string name="accounts_icon_ok">OK</string>
+    <string name="accounts_icon_cancel">Cancel</string>
+
     <!-- Errors -->
     <string name="accounts_error_name_required">The name is required</string>
     <string name="accounts_error_delete_blocked">Cannot delete: the account has transactions.</string>

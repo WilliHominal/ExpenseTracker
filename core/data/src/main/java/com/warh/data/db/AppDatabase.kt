@@ -43,8 +43,8 @@ fun buildDatabase(context: Context): AppDatabase =
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 //TODO - Sacar luego: Seed solo inicial
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor) VALUES (1,'Efectivo','CASH','ARS',12500)")
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor) VALUES (2,'Banco','BANK','USD',0)")
+                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,1,null)")
+                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',0,2,null)")
 
                 db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (1,'Comida',0xFFE57373)")
                 db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (2,'Transporte',0xFF64B5F6)")

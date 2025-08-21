@@ -8,5 +8,7 @@ data class Account(
     val name: String,
     val type: AccountType = AccountType.CASH,
     val currency: String = Currency.getInstance(Locale.getDefault()).currencyCode,
-    val balanceMinor: Long = 0
+    val balanceMinor: Long = 0,
+    val iconIndex: Int = 1,
+    val iconColorArgb: Long? = null
 )

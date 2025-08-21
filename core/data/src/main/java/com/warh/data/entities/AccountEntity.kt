@@ -10,4 +10,6 @@ data class AccountEntity(
     val type: String,
     val currency: String,
     val balanceMinor: Long,
+    val iconIndex: Int = 1,
+    val iconColorArgb: Long? = null
 )

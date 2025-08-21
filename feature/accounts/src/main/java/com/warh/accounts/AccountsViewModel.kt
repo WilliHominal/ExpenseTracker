@@ -37,7 +37,9 @@ data class AccountDraft(
     val name: String = "",
     val type: AccountType = AccountType.CASH,
     val currency: String = defaultCurrency(),
-    val balanceText: String = ""
+    val balanceText: String = "",
+    val iconIndex: Int = 1,
+    val iconColorArgb: Long? = null
 )
 
 private fun defaultCurrency(): String =
@@ -81,13 +83,17 @@ class AccountsViewModel(
                 name = acc.name,
                 type = acc.type,
                 currency = acc.currency,
-                balanceText = formatMajor(acc.balanceMinor, acc.currency)
+                balanceText = formatMajor(acc.balanceMinor, acc.currency),
+                iconIndex = acc.iconIndex,
+                iconColorArgb = acc.iconColorArgb
             )
         )
     }
 
     fun cancelEdit() = _ui.update { it.copy(draft = null) }
 
+    fun onIconIndex(v: Int)    = _ui.update { it.copy(draft = it.draft?.copy(iconIndex = v)) }
+    fun onIconColor(v: Long?)  = _ui.update { it.copy(draft = it.draft?.copy(iconColorArgb = v)) }
     fun onName(v: String)     = _ui.update { it.copy(draft = it.draft?.copy(name = v)) }
     fun onType(v: AccountType)= _ui.update { it.copy(draft = it.draft?.copy(type = v)) }
     fun onCurrency(v: String) = _ui.update {
@@ -111,7 +117,9 @@ class AccountsViewModel(
                 name = name,
                 type = d.type,
                 currency = d.currency,
-                balanceMinor = parseMinor(d.balanceText, d.currency)
+                balanceMinor = parseMinor(d.balanceText, d.currency),
+                iconIndex = d.iconIndex,
+                iconColorArgb = d.iconColorArgb
             )
             io { upsert(account) }
             _ui.update { it.copy(draft = null) }

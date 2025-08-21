@@ -22,10 +22,10 @@ fun Transaction.toEntity() = TransactionEntity(
     id, accountId, type.name, amountMinor, currency, date, date.format(YM), categoryId, merchant, note
 )
 
-fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), currency, balanceMinor)
+fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), currency, balanceMinor, iconIndex, iconColorArgb)
 
 fun Account.toEntity() = AccountEntity(
-    id, name, type.name, currency, balanceMinor
+    id, name, type.name, currency, balanceMinor, iconIndex, iconColorArgb
 )
 
 fun Budget.toEntity() = BudgetEntity(categoryId, year, month, limitMinor)

@@ -21,6 +21,14 @@
     <string name="accounts_delete_cd">Eliminar cuenta</string>
     <string name="accounts_item_meta">%1$s • %2$s</string>
 
+    <!-- Icons -->
+    <string name="accounts_icon_label">Icono</string>
+    <string name="accounts_color_label">Color</string>
+    <string name="accounts_color_custom">Personalizado</string>
+    <string name="accounts_color_picker_title">Elegir color</string>
+    <string name="accounts_icon_ok">OK</string>
+    <string name="accounts_icon_cancel">Cancelar</string>
+
     <!-- Errors -->
     <string name="accounts_error_name_required">El nombre es obligatorio</string>
     <string name="accounts_error_delete_blocked">No se puede eliminar: la cuenta tiene movimientos.</string>

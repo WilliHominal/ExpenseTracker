@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "50ea85be03b8647ca3cf4b5f96f5e31a",
+    "identityHash": "703670e2f0ef7e2946cfbd013f5f9c31",
     "entities": [
       {
         "tableName": "accounts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `currency` TEXT NOT NULL, `balanceMinor` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `currency` TEXT NOT NULL, `balanceMinor` INTEGER NOT NULL, `iconIndex` INTEGER NOT NULL, `iconColorArgb` INTEGER, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -37,6 +37,17 @@
             "columnName": "balanceMinor",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "iconIndex",
+            "columnName": "iconIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconColorArgb",
+            "columnName": "iconColorArgb",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -227,7 +238,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '50ea85be03b8647ca3cf4b5f96f5e31a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '703670e2f0ef7e2946cfbd013f5f9c31')"
     ]
   }
 }

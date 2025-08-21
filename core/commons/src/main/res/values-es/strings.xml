@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="color_picker_title">Elegir color</string>
+    <string name="color_picker_ok">OK</string>
+    <string name="color_picker_cancel">Cancelar</string>
+</resources>
