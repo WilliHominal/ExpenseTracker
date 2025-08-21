@@ -8,7 +8,7 @@ import java.util.Locale
 enum class CurrencyLabel { NONE, SYMBOL, CODE }
 
 object NumberUtils {
-    fun formatAmountMajor(
+    private fun formatAmountMajor(
         amountMinor: Long,
         currencyCode: String,
         label: CurrencyLabel = CurrencyLabel.SYMBOL,
@@ -59,4 +59,7 @@ object NumberUtils {
 
     fun formatAmountWithCode(minor: Long, code: String, trimZeroDecimals: Boolean = true) =
         formatAmountMajor(minor, code, label = CurrencyLabel.CODE, trimZeroDecimals = trimZeroDecimals)
+
+    fun formatAmountPlain(minor: Long, code: String, trimZeroDecimals: Boolean = true) =
+        formatAmountMajor(minor, code, label = CurrencyLabel.NONE, trimZeroDecimals = trimZeroDecimals)
 }

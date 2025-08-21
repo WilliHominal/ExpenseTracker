@@ -37,11 +37,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.domain.models.Budget
 import com.warh.domain.models.Category
 import org.koin.androidx.compose.koinViewModel
-import java.text.NumberFormat
+import java.math.RoundingMode
+import java.util.Currency
 import java.util.Locale
 
 @Composable
@@ -89,10 +91,15 @@ fun BudgetsRoute(vm: BudgetsViewModel = koinViewModel()) {
 
 @Composable
 private fun BudgetRow(row: BudgetRow, onEdit: () -> Unit, onRemove: (Long) -> Unit) {
-    val nf = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
+    val currencyCode = remember { Currency.getInstance(Locale.getDefault()).currencyCode }
 
-    val spent = nf.format(row.spentMinor / 100.0)
-    val limit = nf.format(row.limitMinor / 100.0)
+    val spent = remember(row.spentMinor) {
+        NumberUtils.formatAmountWithSymbol(row.spentMinor, currencyCode, trimZeroDecimals = true)
+    }
+    val limit = remember(row.limitMinor) {
+        NumberUtils.formatAmountWithSymbol(row.limitMinor, currencyCode, trimZeroDecimals = true)
+    }
+
     val over = row.spentMinor > row.limitMinor
     val warn = !over && row.ratio >= 0.8f
 
@@ -128,8 +135,14 @@ private fun BudgetRow(row: BudgetRow, onEdit: () -> Unit, onRemove: (Long) -> Un
             }
 
             LinearProgressIndicator(
-                progress = { row.ratio.coerceAtMost(1f) },
-                modifier = Modifier.fillMaxWidth().height(10.dp))
+                progress = { row.ratio.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(10.dp),
+                color = when {
+                    row.spentMinor > row.limitMinor -> MaterialTheme.colorScheme.error
+                    row.ratio >= 0.8f               -> MaterialTheme.colorScheme.tertiary
+                    else                            -> MaterialTheme.colorScheme.primary
+                }
+            )
 
             val progressText = stringResource(R.string.budgets_progress_value, spent, limit) +
                     when {
@@ -146,7 +159,18 @@ private fun BudgetRow(row: BudgetRow, onEdit: () -> Unit, onRemove: (Long) -> Un
 @Composable
 private fun BudgetDialog(categories: List<Category>, editing: Budget?, onDismiss: () -> Unit, onConfirm: (Long, Long) -> Unit) {
     var selectedId by remember(editing) { mutableStateOf(editing?.categoryId) }
-    var amountText by remember(editing) { mutableStateOf(if (editing != null) (editing.limitMinor / 100.0).toString() else "") }
+
+    val currency = remember { Currency.getInstance(Locale.getDefault()) }
+    val digits = currency.defaultFractionDigits.coerceAtLeast(0)
+
+    var amountText by remember(editing) {
+        val initial = editing?.limitMinor
+            ?.let { minor ->
+                val bd = java.math.BigDecimal(minor).movePointLeft(digits)
+                bd.stripTrailingZeros().toPlainString()
+            } ?: ""
+        mutableStateOf(initial)
+    }
     var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -154,8 +178,14 @@ private fun BudgetDialog(categories: List<Category>, editing: Budget?, onDismiss
         confirmButton = {
             TextButton(onClick = {
                 val id = selectedId
-                val limit = ((amountText.replace(',', '.').toDoubleOrNull() ?: 0.0) * 100).toLong()
-                if (id != null && limit > 0) onConfirm(id, limit)
+                val minor = amountText
+                    .replace(',', '.')
+                    .toBigDecimalOrNull()
+                    ?.movePointRight(digits)
+                    ?.setScale(0, RoundingMode.HALF_UP)
+                    ?.let { runCatching { it.longValueExact() }.getOrNull() }
+                    ?: 0L
+                if (id != null && minor > 0) onConfirm(id, minor)
             }) {
                 Text(stringResource(if (editing == null) R.string.budgets_create else R.string.budgets_save))
             }
@@ -172,7 +202,8 @@ private fun BudgetDialog(categories: List<Category>, editing: Budget?, onDismiss
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
-                        value = categories.firstOrNull { it.id == selectedId }?.name ?: stringResource(R.string.budgets_select),
+                        value = categories.firstOrNull { it.id == selectedId }?.name
+                            ?: stringResource(R.string.budgets_select),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.budgets_category_label)) },
@@ -182,16 +213,38 @@ private fun BudgetDialog(categories: List<Category>, editing: Budget?, onDismiss
                     )
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         categories.forEach { c ->
-                            DropdownMenuItem(text = { Text(c.name) }, onClick = { selectedId = c.id; expanded = false })
+                            DropdownMenuItem(
+                                text = { Text(c.name) },
+                                onClick = { selectedId = c.id; expanded = false }
+                            )
                         }
                     }
                 }
+
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it },
+                    onValueChange = { raw ->
+                        val filtered = raw.filter { it.isDigit() || it == '.' || it == ',' }
+                        val normalized = filtered.replace(',', '.')
+                        val parts = normalized.split('.', limit = 2)
+                        amountText = if (digits == 0) {
+                            parts[0].takeIf { it.isNotEmpty() } ?: ""
+                        } else {
+                            if (parts.size == 1) {
+                                parts[0]
+                            } else {
+                                val intPart = parts[0].ifEmpty { "0" }
+                                val fracPart = parts[1].take(digits)
+                                if (fracPart.isEmpty()) "$intPart." else "$intPart.$fracPart"
+                            }
+                        }
+                    },
                     label = { Text(stringResource(R.string.budgets_limit_label_example)) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = if (digits == 0) KeyboardType.Number else KeyboardType.Decimal
+                    ),
+                )
             }
         }
     )

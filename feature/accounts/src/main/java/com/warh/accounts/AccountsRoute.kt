@@ -45,11 +45,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import java.math.BigDecimal
 import java.util.Currency
 
 @Composable
@@ -137,7 +137,6 @@ private fun AccountEditorCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Type
             var typeExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(expanded = typeExpanded, onExpandedChange = { typeExpanded = it }) {
                 OutlinedTextField(
@@ -159,7 +158,6 @@ private fun AccountEditorCard(
                 }
             }
 
-            // Currency
             val currencies = remember {
                 listOf("ARS","USD","EUR","BRL","CLP","UYU","MXN")
             }
@@ -184,14 +182,20 @@ private fun AccountEditorCard(
                 }
             }
 
-            // Balance
+            val digits = remember(draft.currency) {
+                runCatching { Currency.getInstance(draft.currency).defaultFractionDigits }
+                    .getOrDefault(2).coerceAtLeast(0)
+            }
+
             OutlinedTextField(
                 value = draft.balanceText,
                 onValueChange = onBalanceText,
                 label = { Text(stringResource(R.string.accounts_initial_balance_label, draft.currency)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = if (digits == 0) KeyboardType.Number else KeyboardType.Decimal,
+                    imeAction = ImeAction.Done
+                ),
                 singleLine = true,
-                supportingText = { Text(stringResource(R.string.accounts_initial_balance_hint)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -216,12 +220,12 @@ private fun CurrencyTotalsCard(totals: List<CurrencyTotalUi>, modifier: Modifier
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.accounts_totals_title), style = MaterialTheme.typography.titleMedium)
             totals.forEach { t ->
-                val digits = runCatching { Currency.getInstance(t.currency).defaultFractionDigits }
-                    .getOrDefault(2).coerceAtLeast(0)
-                val major = BigDecimal(t.totalMinor).movePointLeft(digits)
+                val formatted = remember(t.totalMinor, t.currency) {
+                    NumberUtils.formatAmountPlain(t.totalMinor, t.currency, trimZeroDecimals = true)
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(t.currency, style = MaterialTheme.typography.bodyMedium)
-                    Text(major.toPlainString(), style = MaterialTheme.typography.bodyMedium)
+                    Text(formatted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

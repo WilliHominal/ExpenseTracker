@@ -50,6 +50,7 @@ data class AccountDetailUiState(
     val isLoading: Boolean = true,
     val accountId: Long = 0L,
     val accountName: String = "",
+    val listOnly: Boolean = false,
     val categoryNames: Map<Long, String> = emptyMap(),
     val period: PeriodFilter = PeriodFilter.Monthly,
     val totalIncomeMajor: BigDecimal = BigDecimal.ZERO,
@@ -172,6 +173,10 @@ class AccountDetailViewModel(
 
     fun onPeriodChange(newPeriod: PeriodFilter) {
         load(state.value.accountId, newPeriod)
+    }
+
+    fun toggleListOnly() {
+        _state.update { it.copy(listOnly = !it.listOnly) }
     }
 
     private fun buildFilter(period: PeriodFilter): TransactionFilter = when (period) {

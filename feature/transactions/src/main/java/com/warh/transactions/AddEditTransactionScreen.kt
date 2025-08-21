@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
@@ -44,7 +45,7 @@ import com.warh.domain.models.AccountType
 import com.warh.domain.models.Category
 import com.warh.domain.models.TxType
 import org.koin.androidx.compose.koinViewModel
-import java.text.NumberFormat
+import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -101,15 +102,20 @@ fun AddEditTransactionScreen(
     }
 
     val currencyPreview = remember(ui.amountText, selectedCurrency) {
-        val d = ui.amountText.replace(',', '.').toDoubleOrNull()
-        if (d != null) {
-            val digits = selectedCurrency.defaultFractionDigits.coerceAtLeast(0)
-            NumberFormat.getCurrencyInstance(Locale.getDefault()).apply {
-                currency = selectedCurrency
-                maximumFractionDigits = digits
-                minimumFractionDigits = digits
-            }.format(d)
-        } else ""
+        val digits = selectedCurrency.defaultFractionDigits.coerceAtLeast(0)
+
+        val minor: Long? = ui.amountText
+            .replace(',', '.')
+            .toBigDecimalOrNull()
+            ?.movePointRight(digits)
+            ?.setScale(0, RoundingMode.HALF_UP)
+            ?.let { runCatching { it.longValueExact() }.getOrNull() }
+
+        if (minor != null) {
+            NumberUtils.formatAmountWithSymbol(minor, selectedCurrency.currencyCode, trimZeroDecimals = true)
+        } else {
+            ""
+        }
     }
 
     Scaffold(

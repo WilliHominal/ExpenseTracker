@@ -28,6 +28,7 @@
     <!-- Account detail -->
     <string name="account_detail_default_name">Cuenta #%1$s</string>
     <string name="account_detail_cd_back">Volver</string>
+    <string name="account_detail_cd_jump_to_list">Ver transacciones</string>
 
     <string name="account_detail_period_monthly">Mensual</string>
     <string name="account_detail_period_lifetime">Todo el tiempo</string>
