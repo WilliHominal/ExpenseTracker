@@ -3,5 +3,7 @@ package com.warh.domain.models
 data class Category(
     val id: Long,
     val name: String,
-    val colorArgb: Long,
+    val iconIndex: Int = 1,
+    val iconColorArgb: Long? = null,
+    val type: TxType
 )

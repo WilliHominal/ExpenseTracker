@@ -5,6 +5,12 @@
     <string name="categories_error_name_required">The name is required</string>
     <string name="categories_error_delete_blocked">Cannot delete: it has transactions or budgets.</string>
 
+    <string name="categories_icon_label">Icon</string>
+    <string name="categories_icon_color_label">Color</string>
+    <string name="categories_type_label">Type</string>
+    <string name="categories_type_income">Income</string>
+    <string name="categories_type_expense">Expense</string>
+
     <string name="categories_edit_button">Edit</string>
     <string name="categories_name_label">Name</string>
     <string name="categories_color_label">Color</string>

@@ -2,8 +2,8 @@ package com.warh.categories
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,7 +30,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,15 +39,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.TopBarDefault
+import com.warh.commons.color_picker.ColorChooser
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Category
+import com.warh.domain.models.TxType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import com.warh.commons.R.drawable as CommonDrawables
 
 //TODO: Color + icono como en cuentas
 //TODO: Categorias segun tipo: income/expense
@@ -57,7 +64,9 @@ fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
         ui = ui,
         onStartAdd = vm::startAdd,
         onName = vm::onName,
-        onColor = vm::onColor,
+        onType = vm::onType,
+        onIconIndex = vm::onIconIndex,
+        onIconColor = vm::onIconColor,
         onCancel = vm::cancel,
         onSave = vm::save,
         onStartEdit = vm::startEdit,
@@ -70,7 +79,9 @@ fun CategoriesScreen(
     ui: CategoriesUiState,
     onStartAdd: () -> Unit,
     onName: (String) -> Unit,
-    onColor: (Long) -> Unit,
+    onType: (TxType) -> Unit,
+    onIconIndex: (Int) -> Unit,
+    onIconColor: (Long?) -> Unit,
     onCancel: () -> Unit,
     onSave: () -> Unit,
     onStartEdit: (Category) -> Unit,
@@ -100,7 +111,9 @@ fun CategoriesScreen(
                 CategoryEditorCard(
                     draft = d,
                     onName = onName,
-                    onColor = onColor,
+                    onType = onType,
+                    onIconIndex = onIconIndex,
+                    onIconColor = onIconColor,
                     onCancel = onCancel,
                     onSave = onSave
                 )
@@ -109,15 +122,29 @@ fun CategoriesScreen(
 
             LazyColumn(Modifier.fillMaxSize()) {
                 items(ui.items, key = { it.id }) { c ->
+                    val iconIds = remember {
+                        listOf(
+                            CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
+                            CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8,
+                        )
+                    }
+                    val idx = (c.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
+                    val tint = c.iconColorArgb?.let { Color(it.toInt()) }
+                        ?: MaterialTheme.colorScheme.onSurfaceVariant
+
                     ListItem(
                         leadingContent = {
-                            Surface(
-                                color = Color(c.colorArgb.toInt()),
-                                shape = MaterialTheme.shapes.small,
-                                modifier = Modifier.size(16.dp)
-                            ) {}
+                            Icon(painterResource(iconIds[idx]), contentDescription = null, tint = tint)
                         },
                         headlineContent = { Text(c.name) },
+                        supportingContent = {
+                            val typeText = when (c.type) {
+                                TxType.EXPENSE -> stringResource(R.string.categories_type_expense)
+                                TxType.INCOME  -> stringResource(R.string.categories_type_income)
+                                else           -> "—"
+                            }
+                            Text(typeText)
+                        },
                         trailingContent = {
                             Row {
                                 TextButton(onClick = { onStartEdit(c) }) {
@@ -129,7 +156,8 @@ fun CategoriesScreen(
                                     }
                                 }) { Icon(Icons.Default.Delete, null) }
                             }
-                        }
+                        },
+                        modifier = Modifier.fillMaxWidth().clickable { onStartEdit(c) }
                     )
                     HorizontalDivider()
                 }
@@ -142,7 +170,9 @@ fun CategoriesScreen(
 private fun CategoryEditorCard(
     draft: CategoryDraft,
     onName: (String) -> Unit,
-    onColor: (Long) -> Unit,
+    onType: (TxType) -> Unit,
+    onIconIndex: (Int) -> Unit,
+    onIconColor: (Long?) -> Unit,
     onCancel: () -> Unit,
     onSave: () -> Unit
 ) {
@@ -157,11 +187,25 @@ private fun CategoryEditorCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Text(stringResource(R.string.categories_color_label))
-            ColorGrid(
-                selected = draft.colorArgb,
-                onSelect = onColor
-            )
+            // Tipo (solo Expense/Income)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = draft.type == TxType.EXPENSE,
+                    onClick = { onType(TxType.EXPENSE) },
+                    label = { Text(stringResource(R.string.categories_type_expense)) }
+                )
+                FilterChip(
+                    selected = draft.type == TxType.INCOME,
+                    onClick = { onType(TxType.INCOME) },
+                    label = { Text(stringResource(R.string.categories_type_income)) }
+                )
+            }
+
+            Text(stringResource(R.string.categories_icon_label), style = MaterialTheme.typography.labelLarge)
+            IconGrid(selected = draft.iconIndex, onSelect = onIconIndex)
+
+            Text(stringResource(R.string.categories_color_label), style = MaterialTheme.typography.labelLarge)
+            ColorChooser(selected = draft.iconColorArgb, onChange = onIconColor)
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.End)) {
                 TextButton(onClick = onCancel) { Text(stringResource(R.string.categories_cancel_button)) }
@@ -172,25 +216,39 @@ private fun CategoryEditorCard(
 }
 
 @Composable
-private fun ColorGrid(selected: Long, onSelect: (Long) -> Unit) {
-    val colors = listOf(
-        0xFFEF5350, 0xFFAB47BC, 0xFF5C6BC0, 0xFF29B6F6, 0xFF26A69A, 0xFF66BB6A,
-        0xFFFFCA28, 0xFFFFA726, 0xFFFF7043, 0xFF8D6E63, 0xFF9E9E9E, 0xFF607D8B
-    ).map { it or 0xFF000000 }
+private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
+    val icons = listOf(
+        CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
+        CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
+    )
 
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        colors.forEach { argb ->
-            val sel = argb == selected
-            Surface(
-                color = Color(argb.toInt()),
-                shape = MaterialTheme.shapes.small,
-                tonalElevation = if (sel) 6.dp else 0.dp,
-                shadowElevation = if (sel) 6.dp else 0.dp,
-                modifier = Modifier
-                    .size(if (sel) 28.dp else 24.dp)
-                    .padding(2.dp)
-                    .clickable { onSelect(argb) }
-            ) {}
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (row in 0 until 2) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                for (col in 0 until 4) {
+                    val idx = row * 4 + col
+                    val number = idx + 1
+                    val isSel = number == selected
+                    ElevatedCard(
+                        onClick = { onSelect(number) },
+                        shape = CircleShape,
+                        modifier = Modifier.size(44.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = if (isSel) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(icons[idx]),
+                                contentDescription = null,
+                                tint = if (isSel) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -203,7 +261,9 @@ fun CategoriesScreenPreview_List_Light() {
             ui = uiListState(),
             onStartAdd = {},
             onName = {},
-            onColor = {},
+            onType = {},
+            onIconIndex = {},
+            onIconColor = {},
             onCancel = {},
             onSave = {},
             onStartEdit = {},
@@ -220,7 +280,9 @@ fun CategoriesScreenPreview_List_Dark() {
             ui = uiListState(),
             onStartAdd = {},
             onName = {},
-            onColor = {},
+            onType = {},
+            onIconIndex = {},
+            onIconColor = {},
             onCancel = {},
             onSave = {},
             onStartEdit = {},
@@ -237,7 +299,9 @@ fun CategoriesScreenPreview_Draft_Light() {
             ui = uiDraftState(),
             onStartAdd = {},
             onName = {},
-            onColor = {},
+            onType = {},
+            onIconIndex = {},
+            onIconColor = {},
             onCancel = {},
             onSave = {},
             onStartEdit = {},
@@ -254,7 +318,9 @@ fun CategoriesScreenPreview_Draft_Dark() {
             ui = uiDraftState(),
             onStartAdd = {},
             onName = {},
-            onColor = {},
+            onType = {},
+            onIconIndex = {},
+            onIconColor = {},
             onCancel = {},
             onSave = {},
             onStartEdit = {},
@@ -264,10 +330,10 @@ fun CategoriesScreenPreview_Draft_Dark() {
 }
 
 private fun sampleCategories(): List<Category> = listOf(
-    Category(1, "Comida",    0xFFE57373),
-    Category(2, "Transporte",0xFF64B5F6),
-    Category(3, "Hogar",     0xFF81C784),
-    Category(4, "Ocio",      0xFFFFB74D),
+    Category(1, "Comida",    1, 0xFFE57373, TxType.EXPENSE),
+    Category(2, "Transporte",2, 0xFF64B5F6, TxType.EXPENSE),
+    Category(3, "Hogar",     3, 0xFF81C784, TxType.INCOME),
+    Category(4, "Ocio",      4, 0xFFFFB74D, TxType.INCOME),
 )
 
 private fun uiListState() = CategoriesUiState(
@@ -281,7 +347,9 @@ private fun uiDraftState() = CategoriesUiState(
     draft = CategoryDraft(
         id = null,
         name = "Nueva categoría",
-        colorArgb = 0xFF9E9E9E
+        type = TxType.EXPENSE,
+        iconIndex = 1,
+        iconColorArgb = null
     ),
     error = null
 )

@@ -1,4 +1,4 @@
-package com.warh.commons
+package com.warh.commons.color_picker
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.warh.commons.R
 
 @Composable
 fun RingColorPickerDialog(

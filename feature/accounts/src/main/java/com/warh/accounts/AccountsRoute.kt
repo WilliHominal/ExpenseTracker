@@ -63,8 +63,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
-import com.warh.commons.RingColorPickerDialog
+import com.warh.commons.color_picker.RingColorPickerDialog
 import com.warh.commons.TopBarDefault
+import com.warh.commons.color_picker.ColorChooser
+import com.warh.commons.color_picker.GradientCustomSwatch
+import com.warh.commons.color_picker.Swatch
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -310,6 +313,7 @@ private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
         CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
         CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
     )
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (row in 0 until 2) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -338,103 +342,5 @@ private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ColorChooser(
-    selected: Long?,
-    onChange: (Long?) -> Unit
-) {
-    val presets: List<Long> = listOf(
-        0xFF1E88E5, 0xFF43A047, 0xFFFB8C00, 0xFFFF52520,
-        //0xFF607D8B, 0xFF8E24AA, 0xFF795548, 0xFF009688
-    )
-
-    var showPicker by remember { mutableStateOf(false) }
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.horizontalScroll(rememberScrollState())
-    ) {
-        Swatch(
-            color = MaterialTheme.colorScheme.surface,
-            selected = selected == null,
-            onClick = { onChange(null) }
-        )
-
-        presets.forEach { argb ->
-            Swatch(
-                color = Color(argb.toInt()),
-                selected = selected == argb,
-                onClick = { onChange(argb) }
-            )
-        }
-
-        GradientCustomSwatch(
-            selected = selected != null && presets.none { it == selected },
-            onClick = { showPicker = true }
-        )
-    }
-
-    if (showPicker) {
-        RingColorPickerDialog(
-            initial = selected?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary,
-            onCancel = { showPicker = false },
-            onPick = { c ->
-                onChange(c.toArgb().toLong())
-                showPicker = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun Swatch(color: Color, selected: Boolean, onClick: () -> Unit) {
-    ElevatedCard(
-        onClick = onClick,
-        shape = CircleShape,
-        modifier = Modifier.size(28.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = color),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (selected) 6.dp else 1.dp)
-    ) {}
-}
-
-@Composable
-private fun GradientCustomSwatch(
-    selected: Boolean,
-    onClick: () -> Unit,
-    size: Int = 28
-) {
-    val brush = remember {
-        Brush.sweepGradient(
-            listOf(
-                Color(0xFFFF5252),
-                Color(0xFFFF9800),
-                Color(0xFFFFEB3B),
-                Color(0xFF4CAF50),
-                Color(0xFF00BCD4),
-                Color(0xFF3F51B5),
-                Color(0xFFE91E63),
-                Color(0xFFFF5252)
-            )
-        )
-    }
-
-    ElevatedCard(
-        onClick = onClick,
-        shape = CircleShape,
-        modifier = Modifier.size(size.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = if (selected) 6.dp else 1.dp
-        )
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(brush, CircleShape)
-        )
     }
 }

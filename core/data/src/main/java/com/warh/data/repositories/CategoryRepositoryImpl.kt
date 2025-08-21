@@ -10,7 +10,7 @@ class CategoryRepositoryImpl(
     private val db: AppDatabase,
 ) : CategoryRepository {
     override suspend fun all(): List<Category> =
-        db.categoryDao().all().map { Category(it.id, it.name, it.colorArgb) }
+        db.categoryDao().all().map { it.toDomain() }
 
     override suspend fun get(id: Long): Category? =
         db.categoryDao().get(id)?.toDomain()

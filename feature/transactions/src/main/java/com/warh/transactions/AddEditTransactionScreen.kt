@@ -363,9 +363,9 @@ private fun previewTxEditorUi() = TxEditorUiState(
         Account(2, "Efectivo", AccountType.CASH, "ARS", 0),
     ),
     categories = listOf(
-        Category(1, "Comida",   0xFFE57373L),
-        Category(2, "Transporte", 0xFF64B5F6L),
-        Category(3, "Hogar",    0xFF81C784L),
+        Category(1, "Comida",   1, 0xFFE57373L, TxType.EXPENSE),
+        Category(2, "Transporte", 2, 0xFF64B5F6L, TxType.EXPENSE),
+        Category(3, "Hogar",    3, 0xFF81C784L, TxType.INCOME),
     ),
     merchantSuggestions = listOf("Café Martínez", "Starbucks", "Havanna")
 )

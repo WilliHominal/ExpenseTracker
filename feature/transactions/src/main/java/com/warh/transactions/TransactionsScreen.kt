@@ -256,9 +256,9 @@ fun TransactionsScreenPreviewDark() {
             Account(2, "Efectivo", AccountType.CASH, "ARS", 0)
         )
         val sampleCategories = listOf(
-            Category(1, "Comida", 0xFFE57373),
-            Category(2, "Transporte", 0xFF64B5F6),
-            Category(3, "Hogar", 0xFF81C784)
+            Category(1, "Comida", 1, 0xFFE57373, TxType.EXPENSE),
+            Category(2, "Transporte", 2, 0xFF64B5F6, TxType.EXPENSE),
+            Category(3, "Hogar", 3, 0xFF81C784, TxType.INCOME)
         )
         val sampleTx = listOf(
             Transaction(
@@ -303,9 +303,9 @@ fun TransactionsScreenPreviewLight() {
             Account(2, "Efectivo", AccountType.CASH, "ARS", 0)
         )
         val sampleCategories = listOf(
-            Category(1, "Comida", 0xFFE57373),
-            Category(2, "Transporte", 0xFF64B5F6),
-            Category(3, "Hogar", 0xFF81C784)
+            Category(1, "Comida", 1, 0xFFE57373, TxType.EXPENSE),
+            Category(2, "Transporte", 2, 0xFF64B5F6, TxType.EXPENSE),
+            Category(3, "Hogar", 3, 0xFF81C784, TxType.INCOME)
         )
         val sampleTx = listOf(
             Transaction(

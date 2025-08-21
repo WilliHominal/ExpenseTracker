@@ -7,5 +7,7 @@ import androidx.room.PrimaryKey
 data class CategoryEntity(
     @PrimaryKey val id: Long,
     val name: String,
-    val colorArgb: Long,
+    val iconIndex: Int = 1,
+    val iconColorArgb: Long? = null,
+    val type: String = "EXPENSE"
 )

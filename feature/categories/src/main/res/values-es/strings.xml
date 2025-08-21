@@ -4,6 +4,12 @@
     <string name="categories_error_name_required">El nombre es requerido</string>
     <string name="categories_error_delete_blocked">No se puede eliminar: tiene movimientos o presupuestos.</string>
 
+    <string name="categories_icon_label">Ícono</string>
+    <string name="categories_icon_color_label">Color</string>
+    <string name="categories_type_label">Tipo</string>
+    <string name="categories_type_income">Ingreso</string>
+    <string name="categories_type_expense">Gasto</string>
+
     <string name="categories_edit_button">Editar</string>
     <string name="categories_name_label">Nombre</string>
     <string name="categories_color_label">Color</string>

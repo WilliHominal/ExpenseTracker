@@ -9,6 +9,7 @@ import com.warh.data.mappers.toEntity
 import com.warh.domain.models.Budget
 import com.warh.domain.models.BudgetProgress
 import com.warh.domain.models.Category
+import com.warh.domain.models.TxType
 import com.warh.domain.repositories.BudgetRepository
 import com.warh.domain.repositories.CategoryRepository
 import java.time.LocalDate
@@ -61,7 +62,7 @@ class BudgetRepositoryImpl(
             val spent = spentMap[b.categoryId] ?: 0L
             val fallbackName = strings[R.string.category_unnamed]
             BudgetProgress(
-                category = cats[b.categoryId] ?: Category(b.categoryId, fallbackName, 0xFF9E9E9EL),
+                category = cats[b.categoryId] ?: Category(b.categoryId, fallbackName, 1, 0xFF9E9E9EL, TxType.EXPENSE),
                 year = year,
                 month = month,
                 limitMinor = b.limitMinor,

@@ -22,10 +22,24 @@ fun Transaction.toEntity() = TransactionEntity(
     id, accountId, type.name, amountMinor, currency, date, date.format(YM), categoryId, merchant, note
 )
 
-fun AccountEntity.toDomain() = Account(id, name, AccountType.valueOf(type), currency, balanceMinor, iconIndex, iconColorArgb)
+fun AccountEntity.toDomain() = Account(
+    id = id,
+    name = name,
+    type = parseAccountType(type),
+    currency = currency,
+    balanceMinor = balanceMinor,
+    iconIndex = iconIndex,
+    iconColorArgb = iconColorArgb
+)
 
 fun Account.toEntity() = AccountEntity(
-    id, name, type.name, currency, balanceMinor, iconIndex, iconColorArgb
+    id = id,
+    name = name,
+    type = type.name,
+    currency = currency,
+    balanceMinor = balanceMinor,
+    iconIndex = iconIndex,
+    iconColorArgb = iconColorArgb
 )
 
 fun Budget.toEntity() = BudgetEntity(categoryId, year, month, limitMinor)
@@ -35,11 +49,21 @@ fun BudgetEntity.toDomain() = Budget(categoryId, year, month, limitMinor)
 fun CategoryEntity.toDomain() = Category(
     id = id,
     name = name,
-    colorArgb = colorArgb
+    iconIndex = iconIndex,
+    iconColorArgb = iconColorArgb,
+    type = parseTxType(type)
 )
 
 fun Category.toEntity() = CategoryEntity(
     id = id,
     name = name,
-    colorArgb = colorArgb
+    iconIndex = iconIndex,
+    iconColorArgb = iconColorArgb,
+    type = type.name
 )
+
+private fun parseAccountType(raw: String?): AccountType =
+    runCatching { AccountType.valueOf(raw ?: "OTHER") }.getOrElse { AccountType.OTHER }
+
+private fun parseTxType(raw: String?): TxType =
+    runCatching { TxType.valueOf(raw ?: "EXPENSE") }.getOrElse { TxType.EXPENSE }

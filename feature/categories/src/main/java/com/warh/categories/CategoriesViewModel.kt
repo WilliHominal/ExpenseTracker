@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.warh.commons.Strings
 import com.warh.commons.get
 import com.warh.domain.models.Category
+import com.warh.domain.models.TxType
 import com.warh.domain.use_cases.CanDeleteCategoryUseCase
 import com.warh.domain.use_cases.DeleteCategoryUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
@@ -25,7 +26,9 @@ data class CategoriesUiState(
 data class CategoryDraft(
     val id: Long? = null,
     val name: String = "",
-    val colorArgb: Long = 0xFF9E9E9E
+    val iconIndex: Int = 1,
+    val iconColorArgb: Long? = null,
+    val type: TxType = TxType.EXPENSE
 )
 
 class CategoriesViewModel(
@@ -44,17 +47,28 @@ class CategoriesViewModel(
     private fun refresh() = viewModelScope.launch {
         val items = runCatching { io { getCategories() } }
             .getOrDefault(emptyList())
+
         _ui.update { it.copy(items = items, draft = null, error = null) }
     }
 
     fun startAdd() = _ui.update { it.copy(draft = CategoryDraft()) }
+
     fun startEdit(c: Category) = _ui.update {
-        it.copy(draft = CategoryDraft(c.id, c.name, c.colorArgb))
+        it.copy(draft = CategoryDraft(
+            id = c.id,
+            name = c.name,
+            iconIndex = c.iconIndex,
+            iconColorArgb = c.iconColorArgb,
+            type = c.type
+        ))
     }
+
     fun cancel() = _ui.update { it.copy(draft = null) }
 
-    fun onName(v: String)      = updateDraft { it.copy(name = v) }
-    fun onColor(argb: Long)    = updateDraft { it.copy(colorArgb = argb) }
+    fun onName(v: String)           = updateDraft { it.copy(name = v) }
+    fun onIconIndex(v: Int)         = updateDraft { it.copy(iconIndex = v) }
+    fun onIconColor(v: Long?)       = updateDraft { it.copy(iconColorArgb = v) }
+    fun onType(v: TxType)           = updateDraft { it.copy(type = v) }
 
     private fun updateDraft(block: (CategoryDraft) -> CategoryDraft) =
         _ui.update { s -> s.copy(draft = s.draft?.let(block)) }
@@ -65,9 +79,20 @@ class CategoriesViewModel(
             _ui.update { it.copy(error = strings[R.string.categories_error_name_required]) }
             return
         }
+
         viewModelScope.launch {
             runCatching {
-                io { upsert(Category(id = d.id ?: 0L, name = d.name.trim(), colorArgb = d.colorArgb)) }
+                io {
+                    upsert(
+                        Category(
+                            id = d.id ?: 0L,
+                            name = d.name.trim(),
+                            iconIndex = d.iconIndex,
+                            iconColorArgb = d.iconColorArgb,
+                            type = d.type
+                        )
+                    )
+                }
             }.onFailure { e ->
                 _ui.update { it.copy(error = e.message ?: strings[R.string.categories_error_name_required]) }
             }
@@ -77,12 +102,16 @@ class CategoriesViewModel(
 
     fun remove(id: Long, onBlocked: (String) -> Unit) {
         viewModelScope.launch {
-            val allowed = runCatching { io { canDelete(id) } }.getOrDefault(false)
+            val allowed = runCatching { io { canDelete(id) } }
+                .getOrDefault(false)
+
             if (!allowed) {
                 onBlocked(strings[R.string.categories_error_delete_blocked])
                 return@launch
             }
+
             runCatching { io { delete(id) } }
+
             refresh()
         }
     }

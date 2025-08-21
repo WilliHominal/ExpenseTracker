@@ -46,9 +46,9 @@ fun buildDatabase(context: Context): AppDatabase =
                 db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,1,null)")
                 db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',0,2,null)")
 
-                db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (1,'Comida',0xFFE57373)")
-                db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (2,'Transporte',0xFF64B5F6)")
-                db.execSQL("INSERT INTO categories(id,name,colorArgb) VALUES (3,'Hogar',0xFF81C784)")
+                db.execSQL("INSERT INTO categories(id,name,iconIndex,iconColorArgb,type) VALUES (1,'Comida',2,0xFFE57373,'EXPENSE')")
+                db.execSQL("INSERT INTO categories(id,name,iconIndex,iconColorArgb,type) VALUES (2,'Transporte',3,0xFF64B5F6,'EXPENSE')")
+                db.execSQL("INSERT INTO categories(id,name,iconIndex,iconColorArgb,type) VALUES (3,'Hogar',4,0xFF81C784,'EXPENSE')")
 
                 val now = LocalDateTime.now()
                 val nowStr = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
