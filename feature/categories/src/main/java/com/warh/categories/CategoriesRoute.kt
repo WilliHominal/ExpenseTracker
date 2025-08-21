@@ -46,6 +46,9 @@ import com.warh.domain.models.Category
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
+//TODO: Color + icono como en cuentas
+//TODO: Categorias segun tipo: income/expense
+
 @Composable
 fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()

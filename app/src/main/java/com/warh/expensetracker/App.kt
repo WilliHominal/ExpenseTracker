@@ -11,6 +11,8 @@ import androidx.navigation.compose.rememberNavController
 import com.warh.designsystem.ExpenseTheme
 import com.warh.designsystem.SyncSystemBarsWithTheme
 
+//TODO: Acomodar un poco el diseño segun el de v0
+
 @Composable
 fun App() {
     val nav = rememberNavController()

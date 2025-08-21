@@ -56,6 +56,9 @@ import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDateTime
 import java.time.YearMonth
 
+//TODO: Mostrar separador por día
+//TODO: Transacciones recurrentes o programadas, en cantidad o porcentaje (tipo plazo fijo)
+
 @Composable
 fun TransactionsRoute(
     onAddClick: () -> Unit,

@@ -21,6 +21,13 @@
     <string name="accounts_delete_cd">Eliminar cuenta</string>
     <string name="accounts_item_meta">%1$s • %2$s</string>
 
+    <!-- Account Types -->
+    <string name="account_type_cash">Efectivo</string>
+    <string name="account_type_bank">Banco</string>
+    <string name="account_type_loan">Préstamo</string>
+    <string name="account_type_wallet">Billetera</string>
+    <string name="account_type_other">Otro</string>
+
     <!-- Icons -->
     <string name="accounts_icon_label">Icono</string>
     <string name="accounts_color_label">Color</string>

@@ -150,7 +150,7 @@ fun AccountsRoute(
                     },
                     headlineContent = { Text(acc.name) },
                     supportingContent = {
-                        Text(stringResource(R.string.accounts_item_meta, acc.type, acc.currency))
+                        Text(stringResource(R.string.accounts_item_meta, acc.type.localized(), acc.currency))
                     },
                     trailingContent = {
                         Row {
@@ -199,7 +199,7 @@ private fun AccountEditorCard(
             var typeExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(expanded = typeExpanded, onExpandedChange = { typeExpanded = it }) {
                 OutlinedTextField(
-                    value = draft.type.name,
+                    value = draft.type.localized(),
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(R.string.accounts_type_label)) },
@@ -210,7 +210,7 @@ private fun AccountEditorCard(
                 ExposedDropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
                     AccountType.entries.forEach { t ->
                         DropdownMenuItem(
-                            text = { Text(t.name) },
+                            text = { Text(t.localized()) },
                             onClick = { onType(t); typeExpanded = false }
                         )
                     }

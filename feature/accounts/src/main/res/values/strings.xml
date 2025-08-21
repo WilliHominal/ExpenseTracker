@@ -21,6 +21,13 @@
     <string name="accounts_delete_cd">Delete account</string>
     <string name="accounts_item_meta">%1$s • %2$s</string>
 
+    <!-- Account Types -->
+    <string name="account_type_cash">Cash</string>
+    <string name="account_type_bank">Bank</string>
+    <string name="account_type_loan">Loan</string>
+    <string name="account_type_wallet">Wallet</string>
+    <string name="account_type_other">Other</string>
+
     <!-- Icons -->
     <string name="accounts_icon_label">Icon</string>
     <string name="accounts_color_label">Color</string>
