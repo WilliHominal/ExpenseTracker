@@ -1,35 +1,44 @@
 package com.warh.designsystem.bottom_bar
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItemColors
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 object BottomBarDesign {
-    private const val DISABLED_ALPHA = 0.38f
-    private const val UNSELECTED_ALPHA = 0.72f
 
-    @Composable
-    fun containerColor(): Color = MaterialTheme.colorScheme.surfaceContainer
+    object Sizes {
+        val RowHeight   = 40.dp   // antes 48.dp
+        val PillWidth   = 52.dp   // un toque más angosto si querés
+        val PillHeight  = 28.dp   // antes 36.dp
+        val IconButton  = 40.dp   // antes 48.dp
+        val CornerRadius   = 16.dp
 
-    @Composable
-    fun contentColor(): Color = MaterialTheme.colorScheme.onPrimary.copy(alpha = UNSELECTED_ALPHA)
+        val PadStartEnd = 8.dp
+        val PadTop      = 2.dp    // antes 8.dp
+        val PadBottom   = 2.dp    // antes 4.dp
+    }
 
-    @Composable
-    fun itemColors(): NavigationBarItemColors {
-        val cs = MaterialTheme.colorScheme
-        val unselected = cs.surfaceVariant.copy(alpha = UNSELECTED_ALPHA)
-        val disabled   = cs.onPrimary.copy(alpha = DISABLED_ALPHA)
+    object Alpha {
+        const val UNSELECTED_ICON: Float = 0.64f
+    }
 
-        return NavigationBarItemDefaults.colors(
-            indicatorColor      = cs.secondaryContainer,
-            selectedIconColor   = cs.primary,
-            selectedTextColor   = cs.onPrimary,
-            unselectedIconColor = unselected,
-            unselectedTextColor = unselected,
-            disabledIconColor   = disabled,
-            disabledTextColor   = disabled
-        )
+    object Anim {
+        const val SLIDE_MS: Int = 220
+        val slideEasing = FastOutSlowInEasing
+    }
+
+    object Colors {
+        @Composable fun containerColor(): Color         = MaterialTheme.colorScheme.primaryContainer
+        @Composable fun contentColor(): Color           = MaterialTheme.colorScheme.onPrimaryContainer
+        @Composable fun selectedIconColor(): Color      = MaterialTheme.colorScheme.primary
+        @Composable fun unselectedIconColor(): Color    = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.UNSELECTED_ICON)
+        @Composable fun indicatorColor(): Color         = MaterialTheme.colorScheme.secondaryContainer
+    }
+
+    object Shapes {
+        val indicatorShape = RoundedCornerShape(Sizes.CornerRadius)
     }
 }

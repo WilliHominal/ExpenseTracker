@@ -66,6 +66,7 @@ import org.koin.androidx.compose.koinViewModel
 import java.util.Currency
 import com.warh.commons.R.drawable as CommonDrawables
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsRoute(
     vm: AccountsViewModel = koinViewModel(),

@@ -47,6 +47,7 @@ import java.math.RoundingMode
 import java.util.Currency
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetsRoute(vm: BudgetsViewModel = koinViewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()

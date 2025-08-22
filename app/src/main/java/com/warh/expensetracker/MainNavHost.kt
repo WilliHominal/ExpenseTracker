@@ -10,6 +10,7 @@ import com.warh.accounts.AccountsRoute
 import com.warh.accounts.details.AccountDetailRoute
 import com.warh.budgets.BudgetsRoute
 import com.warh.categories.CategoriesRoute
+import com.warh.commons.bottom_bar.FabSpec
 import com.warh.expensetracker.utils.composableAnimated
 import com.warh.expensetracker.utils.composableNoAnim
 import com.warh.transactions.AddEditTransactionRoute
@@ -18,7 +19,8 @@ import com.warh.transactions.TransactionsRoute
 @Composable
 fun MainNavHost(
     modifier: Modifier = Modifier,
-    navController: NavHostController
+    navController: NavHostController,
+    setFab: (FabSpec?) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -26,7 +28,10 @@ fun MainNavHost(
         modifier = modifier
     ) {
         composableNoAnim(Destinations.TRANSACTIONS) {
-            TransactionsRoute(onAddClick = { navController.navigate(Destinations.ADD_TRANSACTION) })
+            TransactionsRoute(
+                onAddClick = { navController.navigate(Destinations.ADD_TRANSACTION) },
+                setFab = setFab
+            )
         }
         composableNoAnim(Destinations.BUDGETS) { BudgetsRoute() }
         composableNoAnim(Destinations.CATEGORIES) { CategoriesRoute() }

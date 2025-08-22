@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,22 +19,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,6 +50,8 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.warh.commons.DateUtils.formatDateTime
 import com.warh.commons.NumberUtils.formatAmountWithCode
 import com.warh.commons.TopBarDefault
+import com.warh.commons.bottom_bar.FabSpec
+import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
@@ -65,7 +72,8 @@ import java.time.YearMonth
 fun TransactionsRoute(
     onAddClick: () -> Unit,
     vm: TransactionsViewModel = koinViewModel(),
-    vmExport: TransactionsExportViewModel = koinViewModel()
+    vmExport: TransactionsExportViewModel = koinViewModel(),
+    setFab: (FabSpec?) -> Unit
 ) {
     val pagingItems = vm.paging.collectAsLazyPagingItems()
     val filter by vm.filter.collectAsStateWithLifecycle()
@@ -73,6 +81,20 @@ fun TransactionsRoute(
     val categories by vm.categories.collectAsStateWithLifecycle()
     val filtersVisible by vm.filtersVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        setFab(
+            FabSpec(
+                visible = true,
+                onClick = onAddClick,
+                content = { Icon(Icons.Default.Add, null) }
+            )
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { setFab(null) }
+    }
 
     TransactionsScreen(
         filter = filter,
@@ -85,11 +107,11 @@ fun TransactionsRoute(
         onDateRangeChange = vm::setDateRange,
         onToggleAccount = vm::toggleAccount,
         onToggleCategory = vm::toggleCategory,
-        onAddClick = onAddClick,
         onExportClick = { vmExport.exportCsv(context, filter) }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionsScreen(
     filter: TransactionFilter,
@@ -102,10 +124,14 @@ fun TransactionsScreen(
     onDateRangeChange: (LocalDateTime?, LocalDateTime?) -> Unit,
     onToggleAccount: (Long) -> Unit,
     onToggleCategory: (Long) -> Unit,
-    onAddClick: () -> Unit,
     onExportClick: () -> Unit
 ) {
+    val appBarState = rememberTopAppBarState()
+    val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
+    val bottomSb = LocalBottomBarBehavior.current
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopBarDefault(
                 title = stringResource(R.string.transactions_title),
@@ -123,15 +149,9 @@ fun TransactionsScreen(
                         )
                     }
                 },
+                scrollBehavior = topSb
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddClick,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) { Icon(Icons.Default.Add, null) }
-        }
     ) { padding ->
         Column(
             Modifier
@@ -154,15 +174,45 @@ fun TransactionsScreen(
                 )
             }
 
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(topSb.nestedScrollConnection)
+                    .then(
+                        bottomSb?.let { Modifier.nestedScroll(it.nestedScrollConnection) } ?: Modifier
+                    )
+            ) {
+                val repeats = 6
+                val baseCount = pagingItems.itemCount
+
+                val total = if (baseCount == 0) 0 else baseCount * repeats
+
+
                 items(
+                    count = total,
+                    key = { i ->
+                        val baseIdx = if (baseCount == 0) i else i % baseCount
+                        val copyIdx = if (baseCount == 0) 0 else i / baseCount
+                        val id = pagingItems.peek(baseIdx)?.id
+                        if (id != null) "${id}_$copyIdx" else "shimmer_$i"
+                    }
+                ) { i ->
+                    if (baseCount == 0) return@items
+
+                    val baseIdx = i % baseCount
+                    val tx = pagingItems[baseIdx]
+                    if (tx != null) {
+                        TransactionRow(tx)
+                    }
+                }
+                /*items(
                     count = pagingItems.itemCount,
                     key = { idx -> pagingItems.peek(idx)?.id ?: idx }
                 ) { idx ->
                     pagingItems[idx]?.let { tx ->
                         TransactionRow(tx)
                     }
-                }
+                }*/
             }
         }
     }
@@ -290,7 +340,6 @@ fun TransactionsScreenPreviewDark() {
             onDateRangeChange = { _, _ -> },
             onToggleAccount = {},
             onToggleCategory = {},
-            onAddClick = {},
             onExportClick = {}
         )
     }
@@ -337,7 +386,6 @@ fun TransactionsScreenPreviewLight() {
             onDateRangeChange = { _, _ -> },
             onToggleAccount = {},
             onToggleCategory = {},
-            onAddClick = {},
             onExportClick = {}
         )
     }
