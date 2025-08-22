@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
@@ -15,6 +17,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -56,9 +60,9 @@ import java.util.Locale
 @Composable
 fun AddEditTransactionRoute(
     onSaved: () -> Unit,
+    onBack: () -> Unit,
     vm: AddEditTransactionViewModel = koinViewModel()
 ) {
-
     val ui by vm.ui.collectAsStateWithLifecycle()
 
     AddEditTransactionScreen(
@@ -71,7 +75,8 @@ fun AddEditTransactionRoute(
         onMerchantPick   = vm::onMerchantPick,
         onNoteChange     = vm::onNoteChange,
         onDateChange     = vm::onDateChange,
-        onSave           = { vm.save(onSaved) }
+        onSave           = { vm.save(onSaved) },
+        onBack           = onBack
     )
 }
 
@@ -88,6 +93,7 @@ fun AddEditTransactionScreen(
     onNoteChange: (String) -> Unit,
     onDateChange: (LocalDateTime) -> Unit,
     onSave: () -> Unit,
+    onBack: () -> Unit,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val dateText = remember(ui.date) {
@@ -119,7 +125,19 @@ fun AddEditTransactionScreen(
     }
 
     Scaffold(
-        topBar = { TopBarDefault(title = stringResource(R.string.add_transaction_title)) },
+        topBar = {
+            TopBarDefault(
+                title = stringResource(R.string.add_transaction_title),
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.add_transaction_cd_back)
+                        )
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onSave,
@@ -324,7 +342,8 @@ fun AddEditTransactionScreenPreviewLight() {
             onMerchantPick = {},
             onNoteChange = {},
             onDateChange = {},
-            onSave = {}
+            onSave = {},
+            onBack = {}
         )
     }
 }
@@ -343,7 +362,8 @@ fun AddEditTransactionScreenPreviewDark() {
             onMerchantPick = {},
             onNoteChange = {},
             onDateChange = {},
-            onSave = {}
+            onSave = {},
+            onBack = {}
         )
     }
 }

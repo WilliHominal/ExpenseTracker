@@ -20,7 +20,8 @@ import kotlinx.coroutines.withContext
 data class CategoriesUiState(
     val items: List<Category> = emptyList(),
     val draft: CategoryDraft? = null,
-    val error: String? = null
+    val error: String? = null,
+    val listFilter: TxType = TxType.EXPENSE
 )
 
 data class CategoryDraft(
@@ -51,7 +52,11 @@ class CategoriesViewModel(
         _ui.update { it.copy(items = items, draft = null, error = null) }
     }
 
-    fun startAdd() = _ui.update { it.copy(draft = CategoryDraft()) }
+    fun onListFilterChange(type: TxType) {
+        _ui.update { it.copy(listFilter = type) }
+    }
+
+    fun startAdd() = _ui.update { it.copy(draft = CategoryDraft(type = it.listFilter)) }
 
     fun startEdit(c: Category) = _ui.update {
         it.copy(draft = CategoryDraft(

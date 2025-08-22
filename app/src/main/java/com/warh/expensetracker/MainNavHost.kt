@@ -39,7 +39,10 @@ fun MainNavHost(
         }
 
         composableAnimated(Destinations.ADD_TRANSACTION) {
-            AddEditTransactionRoute(onSaved = { navController.popBackStack() })
+            AddEditTransactionRoute(
+                onSaved = { navController.popBackStack() },
+                onBack = { navController.navigateUp() }
+            )
         }
 
         composableAnimated(
@@ -49,7 +52,7 @@ fun MainNavHost(
             val accountId = entry.arguments?.getLong("accountId") ?: 0L
             AccountDetailRoute(
                 accountId = accountId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.navigateUp() }
             )
         }
     }

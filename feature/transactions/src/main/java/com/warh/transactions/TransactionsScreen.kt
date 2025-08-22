@@ -56,6 +56,7 @@ import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDateTime
 import java.time.YearMonth
 
+//TODO: Transacciones sin TxType -> lo lleva la categoria
 //TODO: Mostrar separador por día
 //TODO: Transacciones recurrentes o programadas, en cantidad o porcentaje (tipo plazo fijo)
 

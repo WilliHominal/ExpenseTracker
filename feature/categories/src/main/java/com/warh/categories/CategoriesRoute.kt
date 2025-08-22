@@ -53,9 +53,6 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import com.warh.commons.R.drawable as CommonDrawables
 
-//TODO: Color + icono como en cuentas
-//TODO: Categorias segun tipo: income/expense
-
 @Composable
 fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -70,7 +67,8 @@ fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
         onCancel = vm::cancel,
         onSave = vm::save,
         onStartEdit = vm::startEdit,
-        onRemove = vm::remove
+        onRemove = vm::remove,
+        onListFilterChange = vm::onListFilterChange
     )
 }
 
@@ -86,9 +84,14 @@ fun CategoriesScreen(
     onSave: () -> Unit,
     onStartEdit: (Category) -> Unit,
     onRemove: (Long, (String) -> Unit) -> Unit,
+    onListFilterChange: (TxType) -> Unit,
 ) {
     val snackBar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val visibleItems = remember(ui.items, ui.listFilter) {
+        ui.items.filter { it.type == ui.listFilter }
+    }
 
     Scaffold(
         topBar = {
@@ -106,6 +109,21 @@ fun CategoriesScreen(
         snackbarHost = { SnackbarHost(snackBar) }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                FilterChip(
+                    selected = ui.listFilter == TxType.EXPENSE,
+                    onClick = { onListFilterChange(TxType.EXPENSE) },
+                    label = { Text(stringResource(R.string.categories_type_expense)) }
+                )
+                FilterChip(
+                    selected = ui.listFilter == TxType.INCOME,
+                    onClick = { onListFilterChange(TxType.INCOME) },
+                    label = { Text(stringResource(R.string.categories_type_income)) }
+                )
+            }
 
             ui.draft?.let { d ->
                 CategoryEditorCard(
@@ -121,7 +139,7 @@ fun CategoriesScreen(
             }
 
             LazyColumn(Modifier.fillMaxSize()) {
-                items(ui.items, key = { it.id }) { c ->
+                items(visibleItems, key = { it.id }) { c ->
                     val iconIds = remember {
                         listOf(
                             CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
@@ -187,7 +205,6 @@ private fun CategoryEditorCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Tipo (solo Expense/Income)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = draft.type == TxType.EXPENSE,
@@ -267,7 +284,8 @@ fun CategoriesScreenPreview_List_Light() {
             onCancel = {},
             onSave = {},
             onStartEdit = {},
-            onRemove = { _, _ -> }
+            onRemove = { _, _ -> },
+            onListFilterChange = {}
         )
     }
 }
@@ -286,7 +304,8 @@ fun CategoriesScreenPreview_List_Dark() {
             onCancel = {},
             onSave = {},
             onStartEdit = {},
-            onRemove = { _, _ -> }
+            onRemove = { _, _ -> },
+            onListFilterChange = {}
         )
     }
 }
@@ -305,7 +324,8 @@ fun CategoriesScreenPreview_Draft_Light() {
             onCancel = {},
             onSave = {},
             onStartEdit = {},
-            onRemove = { _, _ -> }
+            onRemove = { _, _ -> },
+            onListFilterChange = {}
         )
     }
 }
@@ -324,7 +344,8 @@ fun CategoriesScreenPreview_Draft_Dark() {
             onCancel = {},
             onSave = {},
             onStartEdit = {},
-            onRemove = { _, _ -> }
+            onRemove = { _, _ -> },
+            onListFilterChange = {}
         )
     }
 }

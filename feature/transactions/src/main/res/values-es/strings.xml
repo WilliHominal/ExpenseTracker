@@ -17,6 +17,7 @@
     <string name="add_transaction_error_account_or_amount_invalid">Importe y cuenta son obligatorios</string>
     <string name="add_transaction_error_default">Ocurrió un error inesperado</string>
     <string name="add_transaction_title">Nueva transacción</string>
+    <string name="add_transaction_cd_back">Volver</string>
     <string name="add_transaction_save_button">Guardar</string>
     <string name="add_transaction_save_button_loading">Guardando…</string>
     <string name="add_transaction_amount_label">Importe</string>
