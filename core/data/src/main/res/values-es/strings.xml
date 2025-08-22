@@ -1,4 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="category_unnamed">(sin nombre)</string>
+
+    <string name="cat_food">Comida</string>
+    <string name="cat_transport">Transporte</string>
+    <string name="cat_home">Hogar</string>
+    <string name="cat_shopping">Compras</string>
+    <string name="cat_health">Salud</string>
+    <string name="cat_education">Educación</string>
+    <string name="cat_travel">Viajes</string>
+    <string name="cat_entertainment">Entretenimiento</string>
+    <string name="cat_pets">Mascotas</string>
+    <string name="cat_utilities">Servicios</string>
+    <string name="cat_hobbies">Hobbies</string>
+    <string name="cat_repairs">Reparaciones</string>
+    <string name="cat_clothing">Ropa</string>
+
+    <string name="cat_salary">Sueldo</string>
+    <string name="cat_investments">Inversiones</string>
+    <string name="cat_bonuses">Bonos</string>
+    <string name="cat_savings">Ahorros</string>
+    <string name="cat_gifts">Regalos</string>
+    <string name="cat_rentals">Alquileres</string>
+    <string name="cat_sales">Ventas</string>
+    <string name="cat_refunds">Devoluciones</string>
+    <string name="cat_awards">Premios</string>
+
+    <string name="cat_others">Otro</string>
 </resources>

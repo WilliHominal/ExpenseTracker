@@ -1,8 +1,6 @@
 package com.warh.accounts
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -52,9 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -63,11 +58,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
-import com.warh.commons.color_picker.RingColorPickerDialog
 import com.warh.commons.TopBarDefault
 import com.warh.commons.color_picker.ColorChooser
-import com.warh.commons.color_picker.GradientCustomSwatch
-import com.warh.commons.color_picker.Swatch
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -99,8 +91,6 @@ fun AccountsRoute(
         },
         snackbarHost = { SnackbarHost(snackBar) }
     ) { padding ->
-        val extraBottom = if (!editing) 88.dp else 12.dp
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -110,7 +100,7 @@ fun AccountsRoute(
                 start = padding.calculateStartPadding(LayoutDirection.Ltr) + 12.dp,
                 end   = padding.calculateEndPadding(LayoutDirection.Ltr) + 12.dp,
                 top   = padding.calculateTopPadding() + 12.dp,
-                bottom = padding.calculateBottomPadding() + extraBottom
+                bottom = padding.calculateBottomPadding()
             )
         ) {
             item { CurrencyTotalsCard(ui.totalsByCurrency, Modifier.fillMaxWidth()) }

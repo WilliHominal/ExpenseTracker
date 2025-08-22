@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -30,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,11 +43,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.categories.utils.CategoriesIcons
 import com.warh.commons.TopBarDefault
 import com.warh.commons.color_picker.ColorChooser
 import com.warh.designsystem.ExpenseTheme
@@ -51,7 +58,6 @@ import com.warh.domain.models.Category
 import com.warh.domain.models.TxType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import com.warh.commons.R.drawable as CommonDrawables
 
 @Composable
 fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
@@ -93,6 +99,8 @@ fun CategoriesScreen(
         ui.items.filter { it.type == ui.listFilter }
     }
 
+    val editing = ui.draft != null
+
     Scaffold(
         topBar = {
             TopBarDefault(
@@ -100,85 +108,94 @@ fun CategoriesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onStartAdd,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) { Icon(Icons.Default.Add, null) }
+            if (!editing) {
+                FloatingActionButton(
+                    onClick = onStartAdd,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) { Icon(Icons.Default.Add, null) }
+            }
         },
+        floatingActionButtonPosition = FabPosition.EndOverlay,
         snackbarHost = { SnackbarHost(snackBar) }
-    ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                FilterChip(
-                    selected = ui.listFilter == TxType.EXPENSE,
-                    onClick = { onListFilterChange(TxType.EXPENSE) },
-                    label = { Text(stringResource(R.string.categories_type_expense)) }
-                )
-                FilterChip(
-                    selected = ui.listFilter == TxType.INCOME,
-                    onClick = { onListFilterChange(TxType.INCOME) },
-                    label = { Text(stringResource(R.string.categories_type_income)) }
-                )
+    ) { inner ->
+        val layoutDir = LocalLayoutDirection.current
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start  = inner.calculateStartPadding(layoutDir),
+                    top    = inner.calculateTopPadding(),
+                    end    = inner.calculateEndPadding(layoutDir),
+                    bottom = 0.dp,
+                ),
+        ) {
+            stickyHeader {
+                Surface(
+                    tonalElevation = 2.dp,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(1f)
+                ) {
+                    if (ui.draft != null) {
+                        CategoryEditorCard(
+                            draft = ui.draft,
+                            onName = onName,
+                            onType = onType,
+                            onIconIndex = onIconIndex,
+                            onIconColor = onIconColor,
+                            onCancel = onCancel,
+                            onSave = onSave
+                        )
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            FilterChip(
+                                selected = ui.listFilter == TxType.EXPENSE,
+                                onClick = { onListFilterChange(TxType.EXPENSE) },
+                                label = { Text(stringResource(R.string.categories_type_expense)) }
+                            )
+                            FilterChip(
+                                selected = ui.listFilter == TxType.INCOME,
+                                onClick = { onListFilterChange(TxType.INCOME) },
+                                label = { Text(stringResource(R.string.categories_type_income)) }
+                            )
+                        }
+                    }
+                }
             }
 
-            ui.draft?.let { d ->
-                CategoryEditorCard(
-                    draft = d,
-                    onName = onName,
-                    onType = onType,
-                    onIconIndex = onIconIndex,
-                    onIconColor = onIconColor,
-                    onCancel = onCancel,
-                    onSave = onSave
+            items(visibleItems, key = { it.id }) { c ->
+                val iconSet = remember(c.type) { CategoriesIcons.iconsFor(c.type) }
+                val idx = c.iconIndex.coerceIn(0, (iconSet.size - 1).coerceAtLeast(0))
+                val tint = c.iconColorArgb?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+
+                ListItem(
+                    leadingContent = {
+                        if (iconSet.isNotEmpty()) {
+                            Icon(painterResource(iconSet[idx]), contentDescription = null, tint = tint)
+                        }
+                    },
+                    headlineContent = { Text(c.name) },
+                    trailingContent = {
+                        Row {
+                            TextButton(onClick = { onStartEdit(c) }) {
+                                Text(stringResource(R.string.categories_edit_button))
+                            }
+                            IconButton(onClick = {
+                                onRemove(c.id) { msg ->
+                                    scope.launch { snackBar.showSnackbar(msg) }
+                                }
+                            }) { Icon(Icons.Default.Delete, null) }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().clickable { onStartEdit(c) }
                 )
                 HorizontalDivider()
-            }
-
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(visibleItems, key = { it.id }) { c ->
-                    val iconIds = remember {
-                        listOf(
-                            CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
-                            CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8,
-                        )
-                    }
-                    val idx = (c.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
-                    val tint = c.iconColorArgb?.let { Color(it.toInt()) }
-                        ?: MaterialTheme.colorScheme.onSurfaceVariant
-
-                    ListItem(
-                        leadingContent = {
-                            Icon(painterResource(iconIds[idx]), contentDescription = null, tint = tint)
-                        },
-                        headlineContent = { Text(c.name) },
-                        supportingContent = {
-                            val typeText = when (c.type) {
-                                TxType.EXPENSE -> stringResource(R.string.categories_type_expense)
-                                TxType.INCOME  -> stringResource(R.string.categories_type_income)
-                                else           -> "—"
-                            }
-                            Text(typeText)
-                        },
-                        trailingContent = {
-                            Row {
-                                TextButton(onClick = { onStartEdit(c) }) {
-                                    Text(stringResource(R.string.categories_edit_button))
-                                }
-                                IconButton(onClick = {
-                                    onRemove(c.id) { msg ->
-                                        scope.launch { snackBar.showSnackbar(msg) }
-                                    }
-                                }) { Icon(Icons.Default.Delete, null) }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().clickable { onStartEdit(c) }
-                    )
-                    HorizontalDivider()
-                }
             }
         }
     }
@@ -219,7 +236,7 @@ private fun CategoryEditorCard(
             }
 
             Text(stringResource(R.string.categories_icon_label), style = MaterialTheme.typography.labelLarge)
-            IconGrid(selected = draft.iconIndex, onSelect = onIconIndex)
+            IconGrid(type = draft.type, selected = draft.iconIndex, onSelect = onIconIndex)
 
             Text(stringResource(R.string.categories_color_label), style = MaterialTheme.typography.labelLarge)
             ColorChooser(selected = draft.iconColorArgb, onChange = onIconColor)
@@ -233,36 +250,38 @@ private fun CategoryEditorCard(
 }
 
 @Composable
-private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
-    val icons = listOf(
-        CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
-        CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
-    )
+private fun IconGrid(type: TxType, selected: Int, onSelect: (Int) -> Unit) {
+    val icons = CategoriesIcons.iconsFor(type)
+    val columns = 6
+    val rows = (icons.size + columns - 1) / columns
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (row in 0 until 2) {
+        repeat(rows) { r ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                for (col in 0 until 4) {
-                    val idx = row * 4 + col
-                    val number = idx + 1
-                    val isSel = number == selected
-                    ElevatedCard(
-                        onClick = { onSelect(number) },
-                        shape = CircleShape,
-                        modifier = Modifier.size(44.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = if (isSel) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(icons[idx]),
-                                contentDescription = null,
-                                tint = if (isSel) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                repeat(columns) { c ->
+                    val idx = r * columns + c
+                    if (idx < icons.size) {
+                        val isSel = idx == selected
+                        ElevatedCard(
+                            onClick = { onSelect(idx) },
+                            shape = CircleShape,
+                            modifier = Modifier.size(44.dp),
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = if (isSel) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
                             )
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(icons[idx]),
+                                    contentDescription = null,
+                                    tint = if (isSel) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
+                    } else {
+                        Box(Modifier.size(44.dp)) {}
                     }
                 }
             }

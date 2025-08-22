@@ -39,6 +39,14 @@ val LightScheme = lightColorScheme(
     surfaceVariant = ColorTokens.Light.SurfaceVariant,
     onSurfaceVariant = ColorTokens.Light.OnSurfaceVariant,
 
+    surfaceContainerLowest = ColorTokens.Light.SurfaceContainerLowest,
+    surfaceContainerLow    = ColorTokens.Light.SurfaceContainerLow,
+    surfaceContainer       = ColorTokens.Light.SurfaceContainer,
+    surfaceContainerHigh   = ColorTokens.Light.SurfaceContainerHigh,
+    surfaceContainerHighest= ColorTokens.Light.SurfaceContainerHighest,
+    surfaceBright          = ColorTokens.Light.SurfaceBright,
+    surfaceDim             = ColorTokens.Light.SurfaceDim,
+
     outline = ColorTokens.Light.Outline,
     outlineVariant = ColorTokens.Light.OutlineVariant,
 
@@ -78,6 +86,14 @@ val DarkScheme = darkColorScheme(
     surfaceVariant = ColorTokens.Dark.SurfaceVariant,
     onSurfaceVariant = ColorTokens.Dark.OnSurfaceVariant,
 
+    surfaceContainerLowest = ColorTokens.Dark.SurfaceContainerLowest,
+    surfaceContainerLow    = ColorTokens.Dark.SurfaceContainerLow,
+    surfaceContainer       = ColorTokens.Dark.SurfaceContainer,
+    surfaceContainerHigh   = ColorTokens.Dark.SurfaceContainerHigh,
+    surfaceContainerHighest= ColorTokens.Dark.SurfaceContainerHighest,
+    surfaceBright          = ColorTokens.Dark.SurfaceBright,
+    surfaceDim             = ColorTokens.Dark.SurfaceDim,
+
     outline = ColorTokens.Dark.Outline,
     outlineVariant = ColorTokens.Dark.OutlineVariant,
 
@@ -86,7 +102,7 @@ val DarkScheme = darkColorScheme(
     inversePrimary = ColorTokens.Dark.InversePrimary,
 
     surfaceTint = ColorTokens.Dark.SurfaceTint,
-    scrim = ColorTokens.Dark.Scrim
+    scrim = ColorTokens.Dark.Scrim,
 )
 
 @Composable

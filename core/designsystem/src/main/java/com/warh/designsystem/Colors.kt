@@ -6,13 +6,13 @@ object ColorTokens {
     object Light {
         val Primary            = Color(0xFFD33E4C)
         val OnPrimary          = Color(0xFFFFFFFF)
-        val PrimaryContainer   = Color(0xFFFFD8DD)
-        val OnPrimaryContainer = Color(0xFF5F0B14)
+        val PrimaryContainer   = Color(0xFFD33E4C) //Color del fondo de la bottom bar 0xFFFFD8DD
+        val OnPrimaryContainer = Color(0xFFFFFFFF) //Color del icono del FAB 0xFF5F0B14
 
         val Secondary            = Color(0xFF9E4A55)
         val OnSecondary          = Color(0xFFFFFFFF)
-        val SecondaryContainer   = Color(0xFFFFE6EA)
-        val OnSecondaryContainer = Color(0xFF4A1820)
+        val SecondaryContainer   = Color(0xFFFFE6EA) //Color del fondo del icono seleccionado de la bottom bar
+        val OnSecondaryContainer = Color(0xFF4A1820) //Color del icono seleccionado de la bottom bar
 
         val Tertiary            = Color(0xFF56B8A6)
         val OnTertiary          = Color(0xFF003730)
@@ -28,9 +28,17 @@ object ColorTokens {
         val OnBackground        = Color(0xFF201A1C)
 
         val Surface             = Color(0xFFFFF7F8)
-        val OnSurface           = Color(0xFF211A1C)
+        val OnSurface           = Color(0xFF211A1C) //Color del texto seleccionado de la bottom bar
         val SurfaceVariant      = Color(0xFFF4D7DB)
-        val OnSurfaceVariant    = Color(0xFF534346)
+        val OnSurfaceVariant    = Color(0xFF534346) //Color de iconos sin elegir en bottom bar
+
+        val SurfaceContainerLowest  = Color(0xFFFFF7F8)
+        val SurfaceContainerLow     = Color(0xFFFFF4F6)
+        val SurfaceContainer        = Color(0xFFD33E4C)
+        val SurfaceContainerHigh    = Color(0xFFFFF0F3)
+        val SurfaceContainerHighest = Color(0xFFEEEBED)
+        val SurfaceBright           = Color(0xFFFFFFFF)
+        val SurfaceDim              = Color(0xFFEEEBED)
 
         val Outline             = Color(0xFF89686E)
         val OutlineVariant      = Color(0xFFDABCC1)
@@ -71,6 +79,14 @@ object ColorTokens {
         val OnSurface           = Color(0xFFE1E6EE)
         val SurfaceVariant      = Color(0xFF1C222B)
         val OnSurfaceVariant    = Color(0xFFBAC2CF)
+
+        val SurfaceContainerLowest  = Color(0xFF0E1116)
+        val SurfaceContainerLow     = Color(0xFF161B24)
+        val SurfaceContainer        = Color(0xFF2C333D)
+        val SurfaceContainerHigh    = Color(0xFF1C222B)
+        val SurfaceContainerHighest = Color(0xFF222834)
+        val SurfaceBright           = Color(0xFF1B212B)
+        val SurfaceDim              = Color(0xFF0C1016)
 
         val Outline             = Color(0xFF435063)
         val OutlineVariant      = Color(0xFF303A46)
