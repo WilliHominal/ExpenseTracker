@@ -1,5 +1,6 @@
 package com.warh.expensetracker
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -28,13 +29,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -42,7 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import com.warh.commons.scroll_utils.collapseBy
+import com.warh.commons.scroll_utils.collapseByPx
 import com.warh.designsystem.bottom_bar.BottomBarDesign
 import kotlin.math.roundToInt
 
@@ -54,15 +61,16 @@ fun BottomBar(
     currentRoute: String?,
     offsetY: Float,
     onMeasuredHeight: (Int) -> Unit,
+    isSettling: Boolean, // <- de rememberHideOnScrollState()
 ) {
     val navInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)
 
     val items = remember {
         listOf(
             BarItem(Destinations.TRANSACTIONS, Icons.Default.History),
-            BarItem(Destinations.BUDGETS, Icons.Default.PieChart),
-            BarItem(Destinations.CATEGORIES, Icons.Default.Category),
-            BarItem(Destinations.ACCOUNTS, Icons.Default.AccountBalance),
+            BarItem(Destinations.BUDGETS,      Icons.Default.PieChart),
+            BarItem(Destinations.CATEGORIES,   Icons.Default.Category),
+            BarItem(Destinations.ACCOUNTS,     Icons.Default.AccountBalance),
         )
     }
     val selectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
@@ -73,22 +81,40 @@ fun BottomBar(
     }
     val navBottomPx = navInsets.getBottom(density)
 
+    // factor 0..1 de colapso
     val maxCollapsePx = rowHeightPx + navBottomPx
     val t = (offsetY / maxCollapsePx).coerceIn(0f, 1f)
-    val topPadPx = (navBottomPx * t).roundToInt()
+
+    // padding rojo que se reparte arriba/abajo
+    val topPadPx    = (navBottomPx * t).roundToInt()
     val bottomPadPx = navBottomPx - topPadPx
-    val topPad = with(density) { topPadPx.toDp() }
-    val bottomPad = with(density) { bottomPadPx.toDp() }
+    val topPad: Dp    = with(density) { topPadPx.toDp() }
+    val bottomPad: Dp = with(density) { bottomPadPx.toDp() }
+
+    // si hay settle (fling), suavizamos el recorte
+    val cutTarget = offsetY.roundToInt()
+    val cutPx by if (isSettling)
+        animateIntAsState(
+            targetValue = cutTarget,
+            animationSpec = tween(
+                durationMillis = BottomBarDesign.Anim.SLIDE_MS,
+                easing = BottomBarDesign.Anim.slideEasing
+            ),
+            label = "barCut"
+        )
+    else
+        rememberUpdatedState(cutTarget)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(BottomBarDesign.Colors.containerColor())
             .clipToBounds()
-            .collapseBy(offsetY, minHeightPx = navBottomPx)
+            .collapseByPx(cutPx, minHeightPx = navBottomPx)
             .onSizeChanged { onMeasuredHeight(rowHeightPx + navBottomPx) }
     ) {
         Column(Modifier.fillMaxWidth()) {
+            // padding superior (rojo puro) que crece con el colapso
             Spacer(Modifier.height(topPad))
 
             Box(
@@ -97,9 +123,9 @@ fun BottomBar(
                     .height(BottomBarDesign.Sizes.RowHeight)
                     .padding(
                         PaddingValues(
-                            start = BottomBarDesign.Sizes.PadStartEnd,
-                            end = BottomBarDesign.Sizes.PadStartEnd,
-                            top = BottomBarDesign.Sizes.PadTop,
+                            start  = BottomBarDesign.Sizes.PadStartEnd,
+                            end    = BottomBarDesign.Sizes.PadStartEnd,
+                            top    = BottomBarDesign.Sizes.PadTop,
                             bottom = BottomBarDesign.Sizes.PadBottom
                         )
                     )
@@ -107,14 +133,30 @@ fun BottomBar(
                 var contentWidthPx by remember { mutableIntStateOf(0) }
                 val pillWidthPx = with(density) { BottomBarDesign.Sizes.PillWidth.roundToPx() }
 
-                val slotWidthPx = if (contentWidthPx > 0) contentWidthPx / items.size else 0
-                val targetX = (slotWidthPx * selectedIndex) + (slotWidthPx - pillWidthPx) / 2
-                val animX by animateIntAsState(
-                    targetValue = targetX,
-                    animationSpec = tween(
-                        durationMillis = BottomBarDesign.Anim.SLIDE_MS,
-                        easing = BottomBarDesign.Anim.slideEasing
-                    )
+                // --- ANIMACIÓN DEL INDICADOR (pill) MEJORADA ---
+                val animX = rememberPillXAnimator(
+                    selectedIndex = selectedIndex,
+                    slots = items.size,
+                    contentWidthPx = contentWidthPx,
+                    pillWidthPx = pillWidthPx
+                )
+
+                // feedback sutil mientras se mueve
+                val moving = remember { mutableStateOf(false) }
+                LaunchedEffect(animX) {
+                    moving.value = true
+                    // micro ventana de tiempo; al llegar a target vuelve a 1f
+                    moving.value = false
+                }
+                val scaleX by animateFloatAsState(
+                    targetValue = if (moving.value) 1.06f else 1f,
+                    animationSpec = tween(160),
+                    label = "pillScaleX"
+                )
+                val alpha  by animateFloatAsState(
+                    targetValue = if (moving.value) 0.96f else 1f,
+                    animationSpec = tween(160),
+                    label = "pillAlpha"
                 )
 
                 Box(
@@ -122,6 +164,10 @@ fun BottomBar(
                         .align(Alignment.CenterStart)
                         .offset { IntOffset(animX, 0) }
                         .size(BottomBarDesign.Sizes.PillWidth, BottomBarDesign.Sizes.PillHeight)
+                        .graphicsLayer {
+                            this.scaleX = scaleX
+                            this.alpha = alpha
+                        }
                         .background(
                             BottomBarDesign.Colors.indicatorColor(),
                             BottomBarDesign.Shapes.indicatorShape
@@ -158,7 +204,34 @@ fun BottomBar(
                 }
             }
 
+            // padding inferior (rojo puro) que decrece con el colapso
             Spacer(Modifier.height(bottomPad))
         }
     }
+}
+
+/** Calcula y anima el X del indicador “pill”. */
+@Composable
+private fun rememberPillXAnimator(
+    selectedIndex: Int,
+    slots: Int,
+    contentWidthPx: Int,
+    pillWidthPx: Int
+): Int {
+    fun targetFor(index: Int): Int {
+        if (contentWidthPx <= 0 || slots == 0) return 0
+        val slotW = contentWidthPx / slots
+        return (slotW * index) + (slotW - pillWidthPx) / 2
+    }
+    val targetX = targetFor(selectedIndex)
+
+    val animX by animateIntAsState(
+        targetValue = targetX,
+        animationSpec = tween(
+            durationMillis = BottomBarDesign.Anim.SLIDE_MS,
+            easing = BottomBarDesign.Anim.slideEasing
+        ),
+        label = "pillX"
+    )
+    return animX
 }

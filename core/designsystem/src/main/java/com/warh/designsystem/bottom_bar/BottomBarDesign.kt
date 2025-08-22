@@ -26,7 +26,7 @@ object BottomBarDesign {
     }
 
     object Anim {
-        const val SLIDE_MS: Int = 220
+        const val SLIDE_MS: Int = 260
         val slideEasing = FastOutSlowInEasing
     }
 

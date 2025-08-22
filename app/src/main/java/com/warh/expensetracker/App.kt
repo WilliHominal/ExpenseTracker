@@ -61,6 +61,7 @@ fun App() {
                         currentRoute = currentRoute,
                         offsetY = hideBar.offsetY,
                         onMeasuredHeight = hideBar::setMeasuredHeight,
+                        isSettling = hideBar.isSettling,
                     )
                 }
             },
