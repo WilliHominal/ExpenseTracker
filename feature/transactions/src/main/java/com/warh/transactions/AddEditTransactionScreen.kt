@@ -16,7 +16,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +43,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
+import com.warh.commons.bottom_bar.FabSpec
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
@@ -59,11 +60,24 @@ import java.util.Locale
 
 @Composable
 fun AddEditTransactionRoute(
+    vm: AddEditTransactionViewModel = koinViewModel(),
+    setFab: (FabSpec?) -> Unit,
     onSaved: () -> Unit,
     onBack: () -> Unit,
-    vm: AddEditTransactionViewModel = koinViewModel()
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+
+    SideEffect {
+        setFab(FabSpec(visible = true, onClick = { vm.save(onSaved) }) {
+            Text(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                text = stringResource(
+                    if (ui.isSaving) R.string.add_transaction_save_button_loading
+                    else R.string.add_transaction_save_button
+                )
+            )
+        })
+    }
 
     AddEditTransactionScreen(
         ui = ui,
@@ -75,7 +89,6 @@ fun AddEditTransactionRoute(
         onMerchantPick   = vm::onMerchantPick,
         onNoteChange     = vm::onNoteChange,
         onDateChange     = vm::onDateChange,
-        onSave           = { vm.save(onSaved) },
         onBack           = onBack
     )
 }
@@ -92,7 +105,6 @@ fun AddEditTransactionScreen(
     onMerchantPick: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onDateChange: (LocalDateTime) -> Unit,
-    onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -138,24 +150,12 @@ fun AddEditTransactionScreen(
                 },
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onSave,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Text(
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    text = stringResource(
-                        if (ui.isSaving) R.string.add_transaction_save_button_loading
-                        else R.string.add_transaction_save_button
-                    )
-                )
-            }
-        }
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val keyboardType =
@@ -342,7 +342,6 @@ fun AddEditTransactionScreenPreviewLight() {
             onMerchantPick = {},
             onNoteChange = {},
             onDateChange = {},
-            onSave = {},
             onBack = {}
         )
     }
@@ -362,7 +361,6 @@ fun AddEditTransactionScreenPreviewDark() {
             onMerchantPick = {},
             onNoteChange = {},
             onDateChange = {},
-            onSave = {},
             onBack = {}
         )
     }

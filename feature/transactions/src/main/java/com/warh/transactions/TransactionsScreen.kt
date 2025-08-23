@@ -32,8 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,7 +50,6 @@ import com.warh.commons.DateUtils.formatDateTime
 import com.warh.commons.NumberUtils.formatAmountWithCode
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
-import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
@@ -82,18 +80,10 @@ fun TransactionsRoute(
     val filtersVisible by vm.filtersVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        setFab(
-            FabSpec(
-                visible = true,
-                onClick = onAddClick,
-                content = { Icon(Icons.Default.Add, null) }
-            )
-        )
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { setFab(null) }
+    SideEffect {
+        setFab(FabSpec(visible = true, onClick = onAddClick) {
+            Icon(Icons.Default.Add, null)
+        })
     }
 
     TransactionsScreen(
@@ -128,7 +118,6 @@ fun TransactionsScreen(
 ) {
     val appBarState = rememberTopAppBarState()
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
-    val bottomSb = LocalBottomBarBehavior.current
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -178,41 +167,15 @@ fun TransactionsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .nestedScroll(topSb.nestedScrollConnection)
-                    .then(
-                        bottomSb?.let { Modifier.nestedScroll(it.nestedScrollConnection) } ?: Modifier
-                    )
             ) {
-                val repeats = 6
-                val baseCount = pagingItems.itemCount
-
-                val total = if (baseCount == 0) 0 else baseCount * repeats
-
-
                 items(
-                    count = total,
-                    key = { i ->
-                        val baseIdx = if (baseCount == 0) i else i % baseCount
-                        val copyIdx = if (baseCount == 0) 0 else i / baseCount
-                        val id = pagingItems.peek(baseIdx)?.id
-                        if (id != null) "${id}_$copyIdx" else "shimmer_$i"
-                    }
-                ) { i ->
-                    if (baseCount == 0) return@items
-
-                    val baseIdx = i % baseCount
-                    val tx = pagingItems[baseIdx]
-                    if (tx != null) {
-                        TransactionRow(tx)
-                    }
-                }
-                /*items(
                     count = pagingItems.itemCount,
                     key = { idx -> pagingItems.peek(idx)?.id ?: idx }
                 ) { idx ->
                     pagingItems[idx]?.let { tx ->
                         TransactionRow(tx)
                     }
-                }*/
+                }
             }
         }
     }

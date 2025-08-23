@@ -1,6 +1,7 @@
 package com.warh.commons.scroll_utils
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -16,13 +17,14 @@ import androidx.compose.ui.unit.Velocity
 class HideOnScrollState internal constructor(
     val connection: NestedScrollConnection,
     private val maxHeightPxState: MutableState<Int>,
-    private val offsetPxState: MutableState<Float>,
+    private val offsetPxState: MutableFloatState,
     private val settlingState: MutableState<Boolean>,
 ) {
-    val offsetY: Float get() = offsetPxState.value
+    val offsetY: Float get() = offsetPxState.floatValue
     val isSettling: Boolean get() = settlingState.value
 
     fun setMeasuredHeight(px: Int) { maxHeightPxState.value = px }
+    fun reset() { settlingState.value = false; offsetPxState.floatValue = 0f }
 }
 
 @Composable

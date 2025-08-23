@@ -40,9 +40,6 @@ object BottomBarDesign {
         fun containerColor(): Color = MaterialTheme.colorScheme.primaryContainer
 
         @Composable
-        fun contentColor(): Color = MaterialTheme.colorScheme.onPrimaryContainer
-
-        @Composable
         fun selectedIconColor(): Color = MaterialTheme.colorScheme.primary
 
         @Composable

@@ -22,9 +22,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,13 +35,18 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +56,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.categories.utils.CategoriesIcons
 import com.warh.commons.TopBarDefault
+import com.warh.commons.bottom_bar.FabSpec
+import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.commons.color_picker.ColorChooser
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Category
@@ -61,12 +66,20 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
+fun CategoriesRoute(
+    vm: CategoriesViewModel = koinViewModel(),
+    setFab: (FabSpec?) -> Unit
+) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+
+    SideEffect {
+        setFab(FabSpec(visible = ui.draft == null, onClick = vm::startAdd) {
+            Icon(Icons.Default.Add, null)
+        })
+    }
 
     CategoriesScreen(
         ui = ui,
-        onStartAdd = vm::startAdd,
         onName = vm::onName,
         onType = vm::onType,
         onIconIndex = vm::onIconIndex,
@@ -83,7 +96,6 @@ fun CategoriesRoute(vm: CategoriesViewModel = koinViewModel()) {
 @Composable
 fun CategoriesScreen(
     ui: CategoriesUiState,
-    onStartAdd: () -> Unit,
     onName: (String) -> Unit,
     onType: (TxType) -> Unit,
     onIconIndex: (Int) -> Unit,
@@ -96,29 +108,26 @@ fun CategoriesScreen(
 ) {
     val snackBar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val appBarState = rememberTopAppBarState()
+    val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
+    val bottomSb = LocalBottomBarBehavior.current
 
     val visibleItems = remember(ui.items, ui.listFilter) {
         ui.items.filter { it.type == ui.listFilter }
     }
 
-    val editing = ui.draft != null
+    val hasDraft = ui.draft != null
+    LaunchedEffect(hasDraft) {
+        if (!hasDraft) bottomSb?.reset()
+    }
 
     Scaffold(
         topBar = {
             TopBarDefault(
-                title = stringResource(R.string.categories_title)
+                title = stringResource(R.string.categories_title),
+                scrollBehavior = topSb
             )
         },
-        floatingActionButton = {
-            if (!editing) {
-                FloatingActionButton(
-                    onClick = onStartAdd,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) { Icon(Icons.Default.Add, null) }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.EndOverlay,
         snackbarHost = { SnackbarHost(snackBar) }
     ) { inner ->
         val layoutDir = LocalLayoutDirection.current
@@ -131,7 +140,9 @@ fun CategoriesScreen(
                     top    = inner.calculateTopPadding(),
                     end    = inner.calculateEndPadding(layoutDir),
                     bottom = 0.dp,
-                ),
+                )
+                .nestedScroll(topSb.nestedScrollConnection)
+                .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
         ) {
             stickyHeader {
                 Surface(
@@ -297,7 +308,6 @@ fun CategoriesScreenPreview_List_Light() {
     ExpenseTheme(dark = false) {
         CategoriesScreen(
             ui = uiListState(),
-            onStartAdd = {},
             onName = {},
             onType = {},
             onIconIndex = {},
@@ -317,7 +327,6 @@ fun CategoriesScreenPreview_List_Dark() {
     ExpenseTheme(dark = true) {
         CategoriesScreen(
             ui = uiListState(),
-            onStartAdd = {},
             onName = {},
             onType = {},
             onIconIndex = {},
@@ -337,7 +346,6 @@ fun CategoriesScreenPreview_Draft_Light() {
     ExpenseTheme(dark = false) {
         CategoriesScreen(
             ui = uiDraftState(),
-            onStartAdd = {},
             onName = {},
             onType = {},
             onIconIndex = {},
@@ -357,7 +365,6 @@ fun CategoriesScreenPreview_Draft_Dark() {
     ExpenseTheme(dark = true) {
         CategoriesScreen(
             ui = uiDraftState(),
-            onStartAdd = {},
             onName = {},
             onType = {},
             onIconIndex = {},

@@ -2,11 +2,16 @@ package com.warh.budgets
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -17,7 +22,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -27,19 +31,26 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
+import com.warh.commons.bottom_bar.FabSpec
+import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.domain.models.Budget
 import com.warh.domain.models.Category
 import org.koin.androidx.compose.koinViewModel
@@ -47,48 +58,91 @@ import java.math.RoundingMode
 import java.util.Currency
 import java.util.Locale
 
+@Composable
+fun BudgetsRoute(
+    vm: BudgetsViewModel = koinViewModel(),
+    setFab: (FabSpec?) -> Unit
+) {
+    val ui by vm.ui.collectAsStateWithLifecycle()
+
+    SideEffect {
+        setFab(FabSpec(visible = true, onClick = { vm.openNew() }) {
+            Icon(Icons.Default.Add, null)
+        })
+    }
+
+    BudgetsScreen(
+        ui = ui,
+        onOpenEdit = { id, limit -> vm.openEdit(id, limit) },
+        onRemove = vm::remove,
+        onCloseDialog = vm::closeDialog,
+        onConfirmDialog = { cat, limit -> vm.save(cat, limit) }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BudgetsRoute(vm: BudgetsViewModel = koinViewModel()) {
-    val ui by vm.ui.collectAsStateWithLifecycle()
+private fun BudgetsScreen(
+    ui: BudgetsUiState,
+    onOpenEdit: (categoryId: Long, limitMinor: Long) -> Unit,
+    onRemove: (categoryId: Long) -> Unit,
+    onCloseDialog: () -> Unit,
+    onConfirmDialog: (categoryId: Long, limitMinor: Long) -> Unit
+) {
+    val layoutDir = LocalLayoutDirection.current
+    val appBarState = rememberTopAppBarState()
+    val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
+    val bottomSb = LocalBottomBarBehavior.current
+
     Scaffold(
         topBar = {
             TopBarDefault(
                 title = stringResource(R.string.budgets_title_month_year, ui.month, ui.year),
+                scrollBehavior = topSb
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { vm.openNew() },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) { Icon(Icons.Default.Add, null) }
-        }
-    ) { padding ->
-        Column(
+    ) { inner ->
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (ui.items.isEmpty()) Text(stringResource(R.string.budgets_empty_state))
-            ui.items.forEach { row ->
-                BudgetRow(
-                    row = row,
-                    onEdit = { vm.openEdit(row.categoryId, row.limitMinor) },
-                    onRemove = vm::remove
+                .padding(
+                    start = inner.calculateStartPadding(layoutDir),
+                    top = inner.calculateTopPadding(),
+                    end = inner.calculateEndPadding(layoutDir),
+                    bottom = 0.dp,
                 )
+                .nestedScroll(topSb.nestedScrollConnection)
+                .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            if (ui.items.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.budgets_empty_state),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                items(ui.items, key = { it.categoryId }) { row ->
+                    BudgetRow(
+                        row = row,
+                        onEdit = { onOpenEdit(row.categoryId, row.limitMinor) },
+                        onRemove = onRemove
+                    )
+                }
             }
         }
     }
 
-    if (ui.showDialog) BudgetDialog(
-        categories = ui.categories,
-        editing = ui.editing,
-        onDismiss = vm::closeDialog,
-        onConfirm = { cat, limit -> vm.save(cat, limit) }
-    )
+    if (ui.showDialog) {
+        BudgetDialog(
+            categories = ui.categories,
+            editing = ui.editing,
+            onDismiss = onCloseDialog,
+            onConfirm = onConfirmDialog
+        )
+    }
 }
 
 @Composable
@@ -138,7 +192,9 @@ private fun BudgetRow(row: BudgetRow, onEdit: () -> Unit, onRemove: (Long) -> Un
 
             LinearProgressIndicator(
                 progress = { row.ratio.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp),
                 color = when {
                     row.spentMinor > row.limitMinor -> MaterialTheme.colorScheme.error
                     row.ratio >= 0.8f               -> MaterialTheme.colorScheme.tertiary

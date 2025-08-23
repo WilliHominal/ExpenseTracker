@@ -29,14 +29,23 @@ fun MainNavHost(
     ) {
         composableNoAnim(Destinations.TRANSACTIONS) {
             TransactionsRoute(
+                setFab = setFab,
                 onAddClick = { navController.navigate(Destinations.ADD_TRANSACTION) },
+            )
+        }
+        composableNoAnim(Destinations.BUDGETS) {
+            BudgetsRoute(
                 setFab = setFab
             )
         }
-        composableNoAnim(Destinations.BUDGETS) { BudgetsRoute() }
-        composableNoAnim(Destinations.CATEGORIES) { CategoriesRoute() }
+        composableNoAnim(Destinations.CATEGORIES) {
+            CategoriesRoute(
+                setFab = setFab
+            )
+        }
         composableNoAnim(Destinations.ACCOUNTS) {
             AccountsRoute(
+                setFab = setFab,
                 onAccountClick = { accountId ->
                     navController.navigate("${Destinations.ACCOUNT_DETAIL}/$accountId")
                 }
@@ -45,6 +54,7 @@ fun MainNavHost(
 
         composableAnimated(Destinations.ADD_TRANSACTION) {
             AddEditTransactionRoute(
+                setFab = setFab,
                 onSaved = { navController.popBackStack() },
                 onBack = { navController.navigateUp() }
             )

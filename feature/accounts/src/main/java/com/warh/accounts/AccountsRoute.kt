@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,7 +27,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -41,7 +38,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,59 +51,109 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
+import com.warh.commons.bottom_bar.FabSpec
+import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.commons.color_picker.ColorChooser
+import com.warh.designsystem.ExpenseTheme
+import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.util.Currency
 import com.warh.commons.R.drawable as CommonDrawables
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsRoute(
     vm: AccountsViewModel = koinViewModel(),
+    setFab: (FabSpec?) -> Unit,
     onAccountClick: (Long) -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+
+    SideEffect {
+        setFab(FabSpec(visible = ui.draft == null, onClick = vm::startAdd) {
+            Icon(Icons.Default.Add, null)
+        })
+    }
+
+    AccountsScreen(
+        ui = ui,
+        onStartEdit = vm::startEdit,
+        onDelete = { acc, show -> vm.delete(acc, onBlocked = show) },
+        onAccountClick = onAccountClick,
+        onName = vm::onName,
+        onType = vm::onType,
+        onCurrency = vm::onCurrency,
+        onBalanceText = vm::onBalanceText,
+        onIconIndex = vm::onIconIndex,
+        onIconColor = vm::onIconColor,
+        onCancel = vm::cancelEdit,
+        onSave = { show -> vm.saveEdit(onError = show) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccountsScreen(
+    ui: AccountsUiState,
+    onStartEdit: (Account) -> Unit,
+    onDelete: (Account, (String) -> Unit) -> Unit,
+    onAccountClick: (Long) -> Unit,
+    onName: (String) -> Unit,
+    onType: (AccountType) -> Unit,
+    onCurrency: (String) -> Unit,
+    onBalanceText: (String) -> Unit,
+    onIconIndex: (Int) -> Unit,
+    onIconColor: (Long?) -> Unit,
+    onCancel: () -> Unit,
+    onSave: ((String) -> Unit) -> Unit
+) {
+    val layoutDir = LocalLayoutDirection.current
+    val bottomSb = LocalBottomBarBehavior.current
+    val appBarState = rememberTopAppBarState()
+    val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
+
     val snackBar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val editing = ui.draft != null
+    val show: (String) -> Unit = { msg -> scope.launch { snackBar.showSnackbar(msg) } }
+
+    val hasDraft = ui.draft != null
+    LaunchedEffect(hasDraft) {
+        if (!hasDraft) bottomSb?.reset()
+    }
 
     Scaffold(
         topBar = {
-            TopBarDefault(title = stringResource(R.string.accounts_title))
-        },
-        floatingActionButton = {
-            if (!editing) {
-                FloatingActionButton(
-                    onClick = { vm.startAdd() },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) { Icon(Icons.Default.Add, null) }
-            }
+            TopBarDefault(
+                title = stringResource(R.string.accounts_title),
+                scrollBehavior = topSb
+            )
         },
         snackbarHost = { SnackbarHost(snackBar) }
-    ) { padding ->
+    ) { inner ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding(),
+                .padding(
+                    start  = inner.calculateStartPadding(layoutDir),
+                    top    = inner.calculateTopPadding(),
+                    end    = inner.calculateEndPadding(layoutDir),
+                    bottom = 0.dp,
+                )
+                .nestedScroll(topSb.nestedScrollConnection)
+                .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(
-                start = padding.calculateStartPadding(LayoutDirection.Ltr) + 12.dp,
-                end   = padding.calculateEndPadding(LayoutDirection.Ltr) + 12.dp,
-                top   = padding.calculateTopPadding() + 12.dp,
-                bottom = padding.calculateBottomPadding()
-            )
         ) {
             item { CurrencyTotalsCard(ui.totalsByCurrency, Modifier.fillMaxWidth()) }
 
@@ -110,14 +161,14 @@ fun AccountsRoute(
                 item {
                     AccountEditorCard(
                         draft = d,
-                        onName = vm::onName,
-                        onType = vm::onType,
-                        onCurrency = vm::onCurrency,
-                        onBalanceText = vm::onBalanceText,
-                        onIconIndex = vm::onIconIndex,
-                        onIconColor = vm::onIconColor,
-                        onCancel = vm::cancelEdit,
-                        onSave = { vm.saveEdit { msg -> scope.launch { snackBar.showSnackbar(msg) } } }
+                        onName = onName,
+                        onType = onType,
+                        onCurrency = onCurrency,
+                        onBalanceText = onBalanceText,
+                        onIconIndex = onIconIndex,
+                        onIconColor = onIconColor,
+                        onCancel = onCancel,
+                        onSave = { onSave(show) }
                     )
                 }
             }
@@ -125,17 +176,17 @@ fun AccountsRoute(
             items(ui.accounts, key = { it.id }) { acc ->
                 val iconIds = remember {
                     listOf(
-                        CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
-                        CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8,
+                        CommonDrawables.account_icon_1, CommonDrawables.account_icon_2,
+                        CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
+                        CommonDrawables.account_icon_5, CommonDrawables.account_icon_6,
+                        CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
                     )
                 }
-
                 ListItem(
                     leadingContent = {
                         val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
                         val tint = acc.iconColorArgb?.let { Color(it.toInt()) }
                             ?: MaterialTheme.colorScheme.onSurfaceVariant
-
                         Icon(
                             painter = painterResource(iconIds[idx]),
                             contentDescription = null,
@@ -148,13 +199,10 @@ fun AccountsRoute(
                     },
                     trailingContent = {
                         Row {
-                            TextButton(onClick = { vm.startEdit(acc) }) {
-                                Text(stringResource(R.string.accounts_edit))
+                            TextButton(onClick = { onStartEdit(acc) }) { Text(stringResource(R.string.accounts_edit)) }
+                            IconButton(onClick = { onDelete(acc, show) }) {
+                                Icon(Icons.Default.Delete, null)
                             }
-
-                            IconButton(onClick = {
-                                vm.delete(acc) { msg -> scope.launch { snackBar.showSnackbar(msg) } }
-                            }) { Icon(Icons.Default.Delete, null) }
                         }
                     },
                     modifier = Modifier
@@ -335,3 +383,117 @@ private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
         }
     }
 }
+
+
+@Preview(name = "Accounts — List (Light)", showBackground = true)
+@Composable
+fun AccountsScreenPreview_List_Light() {
+    ExpenseTheme(dark = false) {
+        AccountsScreen(
+            ui = uiListState(),
+            onStartEdit = {},
+            onDelete = { _, _ -> },
+            onAccountClick = {},
+            onName = {},
+            onType = {},
+            onCurrency = {},
+            onBalanceText = {},
+            onIconIndex = {},
+            onIconColor = {},
+            onCancel = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(name = "Accounts — List (Dark)", showBackground = true)
+@Composable
+fun AccountsScreenPreview_List_Dark() {
+    ExpenseTheme(dark = true) {
+        AccountsScreen(
+            ui = uiListState(),
+            onStartEdit = {},
+            onDelete = { _, _ -> },
+            onAccountClick = {},
+            onName = {},
+            onType = {},
+            onCurrency = {},
+            onBalanceText = {},
+            onIconIndex = {},
+            onIconColor = {},
+            onCancel = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(name = "Accounts — Draft (Light)", showBackground = true)
+@Composable
+fun AccountsScreenPreview_Draft_Light() {
+    ExpenseTheme(dark = false) {
+        AccountsScreen(
+            ui = uiDraftState(),
+            onStartEdit = {},
+            onDelete = { _, _ -> },
+            onAccountClick = {},
+            onName = {},
+            onType = {},
+            onCurrency = {},
+            onBalanceText = {},
+            onIconIndex = {},
+            onIconColor = {},
+            onCancel = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(name = "Accounts — Draft (Dark)", showBackground = true)
+@Composable
+fun AccountsScreenPreview_Draft_Dark() {
+    ExpenseTheme(dark = true) {
+        AccountsScreen(
+            ui = uiDraftState(),
+            onStartEdit = {},
+            onDelete = { _, _ -> },
+            onAccountClick = {},
+            onName = {},
+            onType = {},
+            onCurrency = {},
+            onBalanceText = {},
+            onIconIndex = {},
+            onIconColor = {},
+            onCancel = {},
+            onSave = {}
+        )
+    }
+}
+
+private fun sampleAccounts(): List<Account> = listOf(
+    Account(1, "Efectivo", AccountType.CASH, "ARS", 152_500, 1, null),
+    Account(2, "Banco", AccountType.BANK, "USD", 1_250_00, 2, 0xFF64B5F6),
+    Account(3, "Tarjeta", AccountType.WALLET, "ARS", -75_000, 3, 0xFFE57373),
+)
+
+private fun uiListState() = AccountsUiState(
+    accounts = sampleAccounts(),
+    draft = null,
+    totalsByCurrency = listOf(
+        CurrencyTotalUi("ARS", 77_500),
+        CurrencyTotalUi("USD", 125_000)
+    )
+)
+
+private fun uiDraftState() = AccountsUiState(
+    accounts = sampleAccounts(),
+    draft = AccountDraft(
+        id = null,
+        name = "Nueva cuenta",
+        type = AccountType.BANK,
+        currency = "ARS",
+        balanceText = "1000",
+        iconIndex = 2,
+        iconColorArgb = null
+    ),
+    totalsByCurrency = uiListState().totalsByCurrency
+)
