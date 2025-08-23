@@ -27,6 +27,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -55,6 +56,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -64,6 +66,8 @@ import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
 import com.warh.commons.bottom_bar.LocalBottomBarBehavior
+import com.warh.commons.charts.DonutChart
+import com.warh.commons.charts.DonutSlice
 import com.warh.commons.color_picker.ColorChooser
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
@@ -72,6 +76,8 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.util.Currency
 import com.warh.commons.R.drawable as CommonDrawables
+
+//TODO: Al crear cuenta se reemplaza siempre la 3era
 
 @Composable
 fun AccountsRoute(
@@ -105,7 +111,7 @@ fun AccountsRoute(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountsScreen(
+private fun AccountsScreen(
     ui: AccountsUiState,
     onStartEdit: (Account) -> Unit,
     onDelete: (Account, (String) -> Unit) -> Unit,
@@ -155,7 +161,15 @@ fun AccountsScreen(
                 .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { CurrencyTotalsCard(ui.totalsByCurrency, Modifier.fillMaxWidth()) }
+            item {
+                AccountsRingByCurrency(
+                    accounts = ui.accounts,
+                    totals   = ui.totalsByCurrency,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                )
+            }
 
             ui.draft?.let { d ->
                 item {
@@ -208,6 +222,99 @@ fun AccountsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onAccountClick(acc.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountsRingByCurrency(
+    accounts: List<Account>,
+    totals: List<CurrencyTotalUi>,
+    modifier: Modifier = Modifier
+) {
+    if (totals.isEmpty()) return
+
+    val cs = MaterialTheme.colorScheme
+    var selectedCode by remember(totals) { mutableStateOf(totals.first().currency) }
+    val totalForSelected = totals.firstOrNull { it.currency == selectedCode } ?: return
+
+    data class Slice(val name: String, val value: Long, val ratio: Float)
+    val slicesData = remember(accounts, selectedCode) {
+        val items = accounts.filter { it.currency == selectedCode }
+            .map { it.name to kotlin.math.abs(it.balanceMinor) }
+            .filter { it.second > 0L }
+        val sum = items.sumOf { it.second }.takeIf { it > 0 } ?: 1L
+        items.map { (n, v) -> Slice(n, v, v.toFloat() / sum.toFloat()) }
+            .sortedByDescending { it.value }
+    }
+    if (slicesData.isEmpty()) return
+
+    val formattedTotal = remember(totalForSelected.totalMinor, selectedCode) {
+        NumberUtils.formatAmountPlain(totalForSelected.totalMinor, selectedCode, trimZeroDecimals = true)
+    }
+
+    var selectedSlice by remember { mutableStateOf<Int?>(null) }
+    var lastTapAngle by remember { mutableStateOf<Float?>(null) }
+
+    val donutSlices = remember(slicesData) {
+        slicesData.map { DonutSlice(it.name, it.ratio) }
+    }
+
+    val nameToColor = remember(accounts, selectedCode) {
+        accounts
+            .filter { it.currency == selectedCode && kotlin.math.abs(it.balanceMinor) > 0 }
+            .associate { acc ->
+                acc.name to (acc.iconColorArgb?.let { Color(it.toInt()) })
+            }
+    }
+
+    val colorForAccount: (String) -> Color = remember(nameToColor) {
+        { key -> nameToColor[key] ?: cs.onSurfaceVariant }
+    }
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            totals.forEach { t ->
+                FilterChip(
+                    selected = t.currency == selectedCode,
+                    onClick = { selectedCode = t.currency; selectedSlice = null; lastTapAngle = null },
+                    label = { Text(t.currency) }
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            DonutChart(
+                slices = donutSlices,
+                colorFor = colorForAccount,
+                modifier = Modifier.fillMaxSize(),
+                selectedIndex = selectedSlice,
+                onSelectedIndexChange = { selectedSlice = it },
+                lastTapAngle = lastTapAngle,
+                onLastTapAngleChange = { lastTapAngle = it }
+            )
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    stringResource(R.string.accounts_totals_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(text = formattedTotal, style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = selectedCode,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -328,25 +435,6 @@ private fun AccountEditorCard(
 }
 
 @Composable
-private fun CurrencyTotalsCard(totals: List<CurrencyTotalUi>, modifier: Modifier = Modifier) {
-    if (totals.isEmpty()) return
-    ElevatedCard(modifier.fillMaxWidth().padding(12.dp)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.accounts_totals_title), style = MaterialTheme.typography.titleMedium)
-            totals.forEach { t ->
-                val formatted = remember(t.totalMinor, t.currency) {
-                    NumberUtils.formatAmountPlain(t.totalMinor, t.currency, trimZeroDecimals = true)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(t.currency, style = MaterialTheme.typography.bodyMedium)
-                    Text(formatted, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
     val icons = listOf(
         CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
@@ -383,7 +471,6 @@ private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
         }
     }
 }
-
 
 @Preview(name = "Accounts — List (Light)", showBackground = true)
 @Composable
