@@ -1,6 +1,5 @@
 package com.warh.accounts
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,9 +27,8 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -63,7 +61,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.accounts.utils.BalanceUtils.formatMajor
-import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
 import com.warh.commons.bottom_bar.LocalBottomBarBehavior
@@ -94,8 +91,6 @@ fun AccountsRoute(
 
     AccountsScreen(
         ui = ui,
-        onStartEdit = vm::startEdit,
-        onDelete = { acc, show -> vm.delete(acc, onBlocked = show) },
         onAccountClick = onAccountClick,
         onName = vm::onName,
         onType = vm::onType,
@@ -112,8 +107,6 @@ fun AccountsRoute(
 @Composable
 private fun AccountsScreen(
     ui: AccountsUiState,
-    onStartEdit: (Account) -> Unit,
-    onDelete: (Account, (String) -> Unit) -> Unit,
     onAccountClick: (Long) -> Unit,
     onName: (String) -> Unit,
     onType: (AccountType) -> Unit,
@@ -196,33 +189,65 @@ private fun AccountsScreen(
             }
 
             items(ui.accounts, key = { it.id!! }) { acc ->
-                ListItem(
-                    leadingContent = {
-                        val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
-                        val tint = acc.iconColorArgb?.let { Color(it.toInt()) }
-                            ?: MaterialTheme.colorScheme.onSurfaceVariant
+                val cs = MaterialTheme.colorScheme
+                val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
+                val tint = acc.iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
+                val balanceText = formatMajor(acc.balance, acc.currency)
+                val balanceColor = if (acc.balance > 0L) Color(0xFF2E7D32) else cs.error
+
+                ElevatedCard(
+                    onClick = { acc.id?.let(onAccountClick) },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = cs.secondaryContainer
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
                         Icon(
                             painter = painterResource(iconIds[idx]),
                             contentDescription = null,
                             tint = tint
                         )
-                    },
-                    headlineContent = { Text(acc.name) },
-                    supportingContent = {
-                        Text(stringResource(R.string.accounts_item_meta, acc.type.localized(), formatMajor(acc.balance, acc.currency), acc.currency))
-                    },
-                    trailingContent = {
-                        Row {
-                            TextButton(onClick = { onStartEdit(acc) }) { Text(stringResource(R.string.accounts_edit)) }
-                            IconButton(onClick = { onDelete(acc, show) }) {
-                                Icon(Icons.Default.Delete, null)
-                            }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = acc.name,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = acc.type.localized(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { acc.id?.let { onAccountClick(it) } }
-                )
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = balanceText,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = balanceColor
+                            )
+                            Text(
+                                text = acc.currency,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -234,25 +259,68 @@ private fun AccountsRingByCurrency(
     totals: List<CurrencyTotalUi>,
     modifier: Modifier = Modifier
 ) {
-    if (totals.isEmpty()) return
+    val currencyChips = remember(totals, accounts) {
+        val fromTotals = totals.map { it.currency }
+        fromTotals.ifEmpty { accounts.map { it.currency }.distinct().sorted() }
+    }
+    if (currencyChips.isEmpty()) return
 
     val cs = MaterialTheme.colorScheme
-    var selectedCode by remember(totals) { mutableStateOf(totals.first().currency) }
-    val totalForSelected = totals.firstOrNull { it.currency == selectedCode } ?: return
+
+    val chipColors = FilterChipDefaults.filterChipColors(
+        containerColor = cs.surfaceVariant.copy(alpha = 0.55f),
+        labelColor = cs.onSurfaceVariant,
+        iconColor = cs.onSurfaceVariant,
+
+        selectedContainerColor = cs.primaryContainer,
+        selectedLabelColor = cs.onPrimaryContainer,
+        selectedLeadingIconColor = cs.onPrimaryContainer,
+        selectedTrailingIconColor = cs.onPrimaryContainer,
+
+        disabledContainerColor = cs.surfaceVariant.copy(alpha = 0.24f),
+        disabledLabelColor = cs.onSurfaceVariant.copy(alpha = 0.38f),
+        disabledLeadingIconColor = cs.onSurfaceVariant.copy(alpha = 0.38f),
+        disabledTrailingIconColor = cs.onSurfaceVariant.copy(alpha = 0.38f),
+        disabledSelectedContainerColor = cs.primaryContainer.copy(alpha = 0.38f)
+    )
+
+    var selectedCode by remember(currencyChips) { mutableStateOf(currencyChips.first()) }
+    LaunchedEffect(currencyChips) {
+        if (selectedCode !in currencyChips) selectedCode = currencyChips.first()
+    }
+
+    val totalForSelectedMinor = remember(totals, selectedCode) {
+        totals.firstOrNull { it.currency == selectedCode }?.totalMinor ?: 0L
+    }
 
     data class Slice(val name: String, val value: Long, val ratio: Float)
-    val slicesData = remember(accounts, selectedCode) {
-        val items = accounts.filter { it.currency == selectedCode }
-            .map { it.name to kotlin.math.abs(it.balance) }
-            .filter { it.second > 0L }
-        val sum = items.sumOf { it.second }.takeIf { it > 0 } ?: 1L
-        items.map { (n, v) -> Slice(n, v, v.toFloat() / sum.toFloat()) }
-            .sortedByDescending { it.value }
-    }
-    if (slicesData.isEmpty()) return
 
-    val formattedTotal = remember(totalForSelected.totalMinor, selectedCode) {
-        NumberUtils.formatAmountPlain(totalForSelected.totalMinor, selectedCode, trimZeroDecimals = true)
+    val slicesData = remember(accounts, selectedCode) {
+        val items = accounts
+            .filter { it.currency == selectedCode }
+            .map { it.name to kotlin.math.abs(it.balance) }
+
+        when {
+            items.isEmpty() -> listOf(Slice("—", 0L, 1f))
+            else -> {
+                val sum = items.sumOf { it.second }
+                if (sum == 0L) {
+                    val n = items.size
+                    val equal = 1f / n
+                    items.mapIndexed { i, (nme, v) ->
+                        val ratio = if (i == n - 1) 1f - equal * (n - 1) else equal
+                        Slice(nme, v, ratio)
+                    }
+                } else {
+                    items.map { (n, v) -> Slice(n, v, v.toFloat() / sum.toFloat()) }
+                        .sortedByDescending { it.value }
+                }
+            }
+        }
+    }
+
+    val formattedTotal = remember(totalForSelectedMinor, selectedCode) {
+        formatMajor(totalForSelectedMinor, selectedCode)
     }
 
     var selectedSlice by remember { mutableStateOf<Int?>(null) }
@@ -264,7 +332,7 @@ private fun AccountsRingByCurrency(
 
     val nameToColor = remember(accounts, selectedCode) {
         accounts
-            .filter { it.currency == selectedCode && kotlin.math.abs(it.balance) > 0 }
+            .filter { it.currency == selectedCode }
             .associate { acc ->
                 acc.name to (acc.iconColorArgb?.let { Color(it.toInt()) })
             }
@@ -279,11 +347,23 @@ private fun AccountsRingByCurrency(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            totals.forEach { t ->
+            currencyChips.forEach { code ->
                 FilterChip(
-                    selected = t.currency == selectedCode,
-                    onClick = { selectedCode = t.currency; selectedSlice = null; lastTapAngle = null },
-                    label = { Text(t.currency) }
+                    selected = code == selectedCode,
+                    onClick = {
+                        selectedCode = code
+                        selectedSlice = null
+                        lastTapAngle = null
+                    },
+                    label = { Text(code) },
+                    colors = chipColors,
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = code == selectedCode,
+                        borderColor = cs.outline,
+                        selectedBorderColor = Color.Transparent
+                    ),
+                    shape = CircleShape
                 )
             }
         }
@@ -478,8 +558,6 @@ fun AccountsScreenPreview_List_Light() {
     ExpenseTheme(dark = false) {
         AccountsScreen(
             ui = uiListState(),
-            onStartEdit = {},
-            onDelete = { _, _ -> },
             onAccountClick = {},
             onName = {},
             onType = {},
@@ -499,8 +577,6 @@ fun AccountsScreenPreview_List_Dark() {
     ExpenseTheme(dark = true) {
         AccountsScreen(
             ui = uiListState(),
-            onStartEdit = {},
-            onDelete = { _, _ -> },
             onAccountClick = {},
             onName = {},
             onType = {},
@@ -520,8 +596,6 @@ fun AccountsScreenPreview_Draft_Light() {
     ExpenseTheme(dark = false) {
         AccountsScreen(
             ui = uiDraftState(),
-            onStartEdit = {},
-            onDelete = { _, _ -> },
             onAccountClick = {},
             onName = {},
             onType = {},
@@ -541,8 +615,6 @@ fun AccountsScreenPreview_Draft_Dark() {
     ExpenseTheme(dark = true) {
         AccountsScreen(
             ui = uiDraftState(),
-            onStartEdit = {},
-            onDelete = { _, _ -> },
             onAccountClick = {},
             onName = {},
             onType = {},

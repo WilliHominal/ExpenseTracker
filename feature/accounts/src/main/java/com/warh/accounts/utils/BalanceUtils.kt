@@ -12,9 +12,10 @@ object BalanceUtils {
         return bd.movePointRight(digits).setScale(0, RoundingMode.HALF_UP).longValueExact()
     }
 
-    fun formatMajor(minor: Long, currency: String): String {
+    fun formatMajor(minor: Long, currency: String, withSign: Boolean = true): String {
         val digits = runCatching { Currency.getInstance(currency).defaultFractionDigits }
             .getOrDefault(2).coerceAtLeast(0)
-        return BigDecimal(minor).movePointLeft(digits).stripTrailingZeros().toPlainString()
+        val base = BigDecimal(minor).movePointLeft(digits).stripTrailingZeros().toPlainString()
+        return if (withSign && minor > 0) "+$base" else base
     }
 }

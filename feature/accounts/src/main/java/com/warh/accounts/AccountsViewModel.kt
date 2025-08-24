@@ -79,18 +79,6 @@ class AccountsViewModel(
 
     fun startAdd() = draft.update { AccountDraft() }
 
-    fun startEdit(acc: Account) = draft.update {
-        AccountDraft(
-            id = acc.id,
-            name = acc.name,
-            type = acc.type,
-            currency = acc.currency,
-            balanceText = formatMajor(acc.initialBalance, acc.currency),
-            iconIndex = acc.iconIndex,
-            iconColorArgb = acc.iconColorArgb
-        )
-    }
-
     fun cancelEdit() = draft.update { null }
 
     fun onIconIndex(v: Int)    = draft.update { it?.copy(iconIndex = v) }
@@ -123,18 +111,6 @@ class AccountsViewModel(
             )
             withContext(Dispatchers.IO) { upsert(account) }
             draft.update { null }
-        }
-    }
-
-    fun delete(acc: Account, onBlocked: (String) -> Unit) {
-        viewModelScope.launch {
-            val id = acc.id ?: return@launch
-            val allowed = withContext(Dispatchers.IO) { canDelete(id) }
-            if (!allowed) {
-                onBlocked(strings[R.string.accounts_error_delete_blocked])
-                return@launch
-            }
-            withContext(Dispatchers.IO) { delete(id) }
         }
     }
 

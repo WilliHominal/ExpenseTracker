@@ -8,13 +8,23 @@ import com.warh.domain.models.Account
 import com.warh.domain.repositories.AccountRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 class AccountRepositoryImpl(
     private val dao: AccountDao
 ) : AccountRepository {
 
     override fun all(): Flow<List<Account>> =
-        dao.allFlow().map { list -> list.map { it.toDomain() } }
+        dao.allFlow().map { list ->
+            list
+                .map { it.toDomain() }
+                .sortedWith(
+                    compareBy<Account> { it.currency }
+                        .thenBy { it.type.ordinal }
+                        .thenByDescending { it.balance }
+                        .thenBy { it.name.trim().lowercase(Locale.ROOT) }
+                )
+        }
 
     override suspend fun get(id: Long): Account? =
         dao.get(id)?.toDomain()
