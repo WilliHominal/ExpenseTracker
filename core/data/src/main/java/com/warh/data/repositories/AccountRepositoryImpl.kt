@@ -1,27 +1,82 @@
 package com.warh.data.repositories
 
-import com.warh.data.db.AppDatabase
+import androidx.annotation.WorkerThread
+import com.warh.data.daos.AccountDao
+import com.warh.data.entities.AccountEntity
 import com.warh.data.mappers.toDomain
-import com.warh.data.mappers.toEntity
 import com.warh.domain.models.Account
 import com.warh.domain.repositories.AccountRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class AccountRepositoryImpl(
-    private val db: AppDatabase,
+    private val dao: AccountDao
 ) : AccountRepository {
 
-    override suspend fun all(): List<Account> =
-        db.accountDao().all().map { it.toDomain() }
+    override fun all(): Flow<List<Account>> =
+        dao.allFlow().map { list -> list.map { it.toDomain() } }
 
     override suspend fun get(id: Long): Account? =
-        db.accountDao().get(id)?.toDomain()
+        dao.get(id)?.toDomain()
 
-    override suspend fun upsert(account: Account): Long =
-        db.accountDao().upsert(account.toEntity())
+    @WorkerThread
+    override suspend fun upsert(account: Account): Long {
+        val id = account.id
+        val typeString = account.type.name
+
+        if (id == null) {
+            val entity = AccountEntity(
+                id = null,
+                name = account.name,
+                type = typeString,
+                currency = account.currency,
+                initialBalance = account.initialBalance,
+                balance = account.initialBalance,
+                iconIndex = account.iconIndex,
+                iconColorArgb = account.iconColorArgb
+            )
+            return dao.insert(entity)
+        }
+
+        val current = dao.get(id)
+        if (current == null) {
+            val entity = AccountEntity(
+                id = null,
+                name = account.name,
+                type = typeString,
+                currency = account.currency,
+                initialBalance = account.initialBalance,
+                balance = account.initialBalance,
+                iconIndex = account.iconIndex,
+                iconColorArgb = account.iconColorArgb
+            )
+            return dao.insert(entity)
+        }
+
+        if (current.initialBalance != account.initialBalance) {
+            dao.applyInitialDelta(
+                id = id,
+                oldInitial = current.initialBalance,
+                newInitial = account.initialBalance
+            )
+        }
+
+        dao.updateAccountWithoutTouchingBalance(
+            id = id,
+            name = account.name,
+            type = typeString,
+            currency = account.currency,
+            initialBalance = account.initialBalance,
+            iconIndex = account.iconIndex,
+            iconColorArgb = account.iconColorArgb
+        )
+
+        return id
+    }
 
     override suspend fun delete(id: Long) =
-        db.accountDao().delete(id)
+        dao.delete(id)
 
     override suspend fun txCountForAccount(id: Long): Int =
-        db.accountDao().txCountForAccount(id)
+        dao.txCountForAccount(id)
 }

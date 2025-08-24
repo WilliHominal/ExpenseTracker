@@ -252,7 +252,7 @@ fun AddEditTransactionScreen(
 @Composable
 private fun ExposedDropdown(
     label: String,
-    items: List<Pair<Long, String>>,
+    items: List<Pair<Long?, String>>,
     selectedId: Long?,
     onSelected: (Long) -> Unit,
 ) {
@@ -271,7 +271,7 @@ private fun ExposedDropdown(
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             items.forEach { (id, name) ->
                 DropdownMenuItem(text = { Text(name) }, onClick = {
-                    onSelected(id)
+                    id?.let { onSelected(id) }
                     expanded = false
                 })
             }

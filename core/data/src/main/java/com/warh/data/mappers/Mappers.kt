@@ -27,7 +27,8 @@ fun AccountEntity.toDomain() = Account(
     name = name,
     type = parseAccountType(type),
     currency = currency,
-    balanceMinor = balanceMinor,
+    balance = balance,
+    initialBalance = initialBalance,
     iconIndex = iconIndex,
     iconColorArgb = iconColorArgb
 )
@@ -37,7 +38,8 @@ fun Account.toEntity() = AccountEntity(
     name = name,
     type = type.name,
     currency = currency,
-    balanceMinor = balanceMinor,
+    balance = balance,
+    initialBalance = initialBalance,
     iconIndex = iconIndex,
     iconColorArgb = iconColorArgb
 )

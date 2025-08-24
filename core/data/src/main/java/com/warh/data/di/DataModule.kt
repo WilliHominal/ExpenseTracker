@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.warh.data.db.AppDatabase
 import com.warh.data.repositories.AccountRepositoryImpl
 import com.warh.data.repositories.BudgetRepositoryImpl
 import com.warh.data.repositories.CategoryRepositoryImpl
@@ -29,6 +30,8 @@ val dataModule = module {
 
     singleOf(::buildDatabase)
     singleOf(::provideUserPrefs)
+
+    single { get<AppDatabase>().accountDao() }
 
     singleOf(::TransactionRepositoryImpl) bind TransactionRepository::class
     singleOf(::AccountRepositoryImpl) bind AccountRepository::class

@@ -3,7 +3,7 @@ package com.warh.transactions.di
 import com.warh.domain.use_cases.AddTransactionUseCase
 import com.warh.domain.use_cases.GetAccountTransactionsUseCase
 import com.warh.domain.use_cases.GetAccountUseCase
-import com.warh.domain.use_cases.GetAccountsUseCase
+import com.warh.domain.use_cases.ObserveAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetMerchantSuggestionsUseCase
 import com.warh.domain.use_cases.GetMonthlyCategorySpendUseCase
@@ -22,7 +22,7 @@ val transactionsModule = module {
     viewModelOf(::TransactionsExportViewModel)
 
     factoryOf(::GetTransactionsPagerUseCase)
-    factoryOf(::GetAccountsUseCase)
+    factoryOf(::ObserveAccountsUseCase)
     factoryOf(::GetAccountUseCase)
     factoryOf(::GetCategoriesUseCase)
     factoryOf(::AddTransactionUseCase)

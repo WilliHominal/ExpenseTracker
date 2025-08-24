@@ -9,7 +9,7 @@ import com.warh.domain.models.Category
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TxType
 import com.warh.domain.use_cases.AddTransactionUseCase
-import com.warh.domain.use_cases.GetAccountsUseCase
+import com.warh.domain.use_cases.ObserveAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetMerchantSuggestionsUseCase
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +50,7 @@ data class TxEditorUiState(
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class AddEditTransactionViewModel(
     private val addTx: AddTransactionUseCase,
-    private val getAccounts: GetAccountsUseCase,
+    private val observeAccounts: ObserveAccountsUseCase,
     private val getCategories: GetCategoriesUseCase,
     private val getMerchantSuggestions: GetMerchantSuggestionsUseCase,
     private val strings: Strings,
@@ -63,15 +63,19 @@ class AddEditTransactionViewModel(
 
     init {
         viewModelScope.launch {
-            val accounts = runCatching { io { getAccounts() } }.getOrDefault(emptyList())
-            val categories = runCatching { io { getCategories() } }.getOrDefault(emptyList())
-            _ui.update {
-                it.copy(
-                    accounts = accounts,
-                    categories = categories,
-                    accountId = accounts.firstOrNull()?.id
-                )
+            observeAccounts().collect { accounts ->
+                _ui.update { st ->
+                    val newSelected =
+                        st.accountId?.takeIf { sel -> accounts.any { it.id == sel } }
+                            ?: accounts.firstOrNull()?.id
+                    st.copy(accounts = accounts, accountId = newSelected)
+                }
             }
+        }
+
+        viewModelScope.launch {
+            val categories = runCatching { io { getCategories() } }.getOrDefault(emptyList())
+            _ui.update { it.copy(categories = categories) }
         }
 
         viewModelScope.launch {

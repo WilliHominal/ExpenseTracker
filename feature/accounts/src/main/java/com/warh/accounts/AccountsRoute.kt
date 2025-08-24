@@ -62,6 +62,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.warh.accounts.utils.BalanceUtils.formatMajor
 import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
@@ -76,8 +77,6 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.util.Currency
 import com.warh.commons.R.drawable as CommonDrawables
-
-//TODO: Al crear cuenta se reemplaza siempre la 3era
 
 @Composable
 fun AccountsRoute(
@@ -139,6 +138,15 @@ private fun AccountsScreen(
         if (!hasDraft) bottomSb?.reset()
     }
 
+    val iconIds = remember {
+        listOf(
+            CommonDrawables.account_icon_1, CommonDrawables.account_icon_2,
+            CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
+            CommonDrawables.account_icon_5, CommonDrawables.account_icon_6,
+            CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
+        )
+    }
+
     Scaffold(
         topBar = {
             TopBarDefault(
@@ -187,15 +195,7 @@ private fun AccountsScreen(
                 }
             }
 
-            items(ui.accounts, key = { it.id }) { acc ->
-                val iconIds = remember {
-                    listOf(
-                        CommonDrawables.account_icon_1, CommonDrawables.account_icon_2,
-                        CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
-                        CommonDrawables.account_icon_5, CommonDrawables.account_icon_6,
-                        CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
-                    )
-                }
+            items(ui.accounts, key = { it.id!! }) { acc ->
                 ListItem(
                     leadingContent = {
                         val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
@@ -209,7 +209,7 @@ private fun AccountsScreen(
                     },
                     headlineContent = { Text(acc.name) },
                     supportingContent = {
-                        Text(stringResource(R.string.accounts_item_meta, acc.type.localized(), acc.currency))
+                        Text(stringResource(R.string.accounts_item_meta, acc.type.localized(), formatMajor(acc.balance, acc.currency), acc.currency))
                     },
                     trailingContent = {
                         Row {
@@ -221,7 +221,7 @@ private fun AccountsScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onAccountClick(acc.id) }
+                        .clickable { acc.id?.let { onAccountClick(it) } }
                 )
             }
         }
@@ -243,7 +243,7 @@ private fun AccountsRingByCurrency(
     data class Slice(val name: String, val value: Long, val ratio: Float)
     val slicesData = remember(accounts, selectedCode) {
         val items = accounts.filter { it.currency == selectedCode }
-            .map { it.name to kotlin.math.abs(it.balanceMinor) }
+            .map { it.name to kotlin.math.abs(it.balance) }
             .filter { it.second > 0L }
         val sum = items.sumOf { it.second }.takeIf { it > 0 } ?: 1L
         items.map { (n, v) -> Slice(n, v, v.toFloat() / sum.toFloat()) }
@@ -264,7 +264,7 @@ private fun AccountsRingByCurrency(
 
     val nameToColor = remember(accounts, selectedCode) {
         accounts
-            .filter { it.currency == selectedCode && kotlin.math.abs(it.balanceMinor) > 0 }
+            .filter { it.currency == selectedCode && kotlin.math.abs(it.balance) > 0 }
             .associate { acc ->
                 acc.name to (acc.iconColorArgb?.let { Color(it.toInt()) })
             }
@@ -557,9 +557,9 @@ fun AccountsScreenPreview_Draft_Dark() {
 }
 
 private fun sampleAccounts(): List<Account> = listOf(
-    Account(1, "Efectivo", AccountType.CASH, "ARS", 152_500, 1, null),
-    Account(2, "Banco", AccountType.BANK, "USD", 1_250_00, 2, 0xFF64B5F6),
-    Account(3, "Tarjeta", AccountType.WALLET, "ARS", -75_000, 3, 0xFFE57373),
+    Account(1, "Efectivo", AccountType.CASH, "ARS", 152_500, 152_500, 1, null),
+    Account(2, "Banco", AccountType.BANK, "USD", 1_250_00, 1_250_00, 2, 0xFF64B5F6),
+    Account(3, "Tarjeta", AccountType.WALLET, "ARS", -75_000, -75_000, 3, 0xFFE57373),
 )
 
 private fun uiListState() = AccountsUiState(

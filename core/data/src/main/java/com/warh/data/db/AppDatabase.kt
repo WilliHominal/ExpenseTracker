@@ -46,8 +46,8 @@ fun buildDatabase(context: Context): AppDatabase =
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 //TODO - Sacar las accounts+txs luego
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,1,null)")
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balanceMinor,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',0,2,null)")
+                db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,12500,1,null)")
+                db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',10,10,2,null)")
 
                 val expenseSeeds = listOf(
                     Category(0, context.getString(R.string.cat_food),          iconIndex = 0,  iconColorArgb = 0xFFE57373, type = TxType.EXPENSE),
@@ -59,7 +59,7 @@ fun buildDatabase(context: Context): AppDatabase =
                     Category(0, context.getString(R.string.cat_travel),        iconIndex = 6,  iconColorArgb = 0xFF4FC3F7, type = TxType.EXPENSE),
                     Category(0, context.getString(R.string.cat_entertainment), iconIndex = 7,  iconColorArgb = 0xFFFF8A65, type = TxType.EXPENSE),
                     Category(0, context.getString(R.string.cat_pets),          iconIndex = 8,  iconColorArgb = 0xFF8D6E63, type = TxType.EXPENSE),
-                    Category(0, context.getString(R.string.cat_utilities),     iconIndex = 9, iconColorArgb = 0xFF9E9E9E, type = TxType.EXPENSE),
+                    Category(0, context.getString(R.string.cat_utilities),     iconIndex = 9,  iconColorArgb = 0xFF9E9E9E, type = TxType.EXPENSE),
                     Category(0, context.getString(R.string.cat_hobbies),       iconIndex = 10, iconColorArgb = 0xFF90A4AE, type = TxType.EXPENSE),
                     Category(0, context.getString(R.string.cat_repairs),       iconIndex = 11, iconColorArgb = 0xFFFFD54F, type = TxType.EXPENSE),
                     Category(0, context.getString(R.string.cat_clothing),      iconIndex = 12, iconColorArgb = 0xFF7986CB, type = TxType.EXPENSE),

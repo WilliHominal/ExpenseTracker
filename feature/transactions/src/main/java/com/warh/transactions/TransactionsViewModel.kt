@@ -8,7 +8,7 @@ import com.warh.domain.models.Account
 import com.warh.domain.models.Category
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TransactionFilter
-import com.warh.domain.use_cases.GetAccountsUseCase
+import com.warh.domain.use_cases.ObserveAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetTransactionsPagerUseCase
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +26,7 @@ import java.time.LocalDateTime
 
 class TransactionsViewModel(
     private val pagerUseCase: GetTransactionsPagerUseCase,
-    private val getAccounts: GetAccountsUseCase,
+    private val observeAccounts: ObserveAccountsUseCase,
     private val getCategories: GetCategoriesUseCase,
 ) : ViewModel() {
 
@@ -44,12 +44,15 @@ class TransactionsViewModel(
 
     init {
         viewModelScope.launch {
-            val (accs, cats) = io {
-                val a = runCatching { getAccounts() }.getOrDefault(emptyList())
-                val c = runCatching { getCategories() }.getOrDefault(emptyList())
-                a to c
+            observeAccounts().collect { accs ->
+                _accounts.value = accs
+                val validIds = accs.mapNotNull { it.id }.toSet()
+                _filter.update { f -> f.copy(accountIds = f.accountIds.intersect(validIds)) }
             }
-            _accounts.value = accs
+        }
+
+        viewModelScope.launch {
+            val cats = io { runCatching { getCategories() }.getOrDefault(emptyList()) }
             _categories.value = cats
         }
     }
@@ -74,7 +77,6 @@ class TransactionsViewModel(
     }
 
     fun toggleFiltersVisible() { _filtersVisible.update { !it } }
-    fun setFiltersVisible(visible: Boolean) { _filtersVisible.value = visible }
 
     private fun TransactionFilter.normalize(): TransactionFilter =
         copy(text = text?.trim()?.lowercase()?.takeIf { it.isNotEmpty() })

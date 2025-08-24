@@ -221,7 +221,7 @@ private fun FilterBar(
                 val selected = acc.id in filter.accountIds
                 FilterChip(
                     selected = selected,
-                    onClick = { onToggleAccount(acc.id) },
+                    onClick = { acc.id?.let { onToggleAccount(it) } },
                     label = { Text(acc.name) }
                 )
             }

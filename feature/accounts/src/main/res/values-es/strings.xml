@@ -19,7 +19,7 @@
     <string name="accounts_save">Guardar</string>
     <string name="accounts_add_cd">Agregar cuenta</string>
     <string name="accounts_delete_cd">Eliminar cuenta</string>
-    <string name="accounts_item_meta">%1$s • %2$s</string>
+    <string name="accounts_item_meta">%1$s • %2$s %3$s</string>
 
     <!-- Account Types -->
     <string name="account_type_cash">Efectivo</string>

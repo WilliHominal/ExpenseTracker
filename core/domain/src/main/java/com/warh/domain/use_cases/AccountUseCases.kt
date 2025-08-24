@@ -2,9 +2,10 @@ package com.warh.domain.use_cases
 
 import com.warh.domain.models.Account
 import com.warh.domain.repositories.AccountRepository
+import kotlinx.coroutines.flow.Flow
 
-class GetAccountsUseCase(private val repo: AccountRepository) {
-    suspend operator fun invoke(): List<Account> = repo.all()
+class ObserveAccountsUseCase(private val repo: AccountRepository) {
+    operator fun invoke(): Flow<List<Account>> = repo.all()
 }
 
 class GetAccountUseCase(private val repo: AccountRepository) {

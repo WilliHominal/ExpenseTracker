@@ -9,6 +9,7 @@ import com.warh.data.mappers.toDomain
 import com.warh.data.mappers.toEntity
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TransactionFilter
+import com.warh.domain.models.TxType
 import com.warh.domain.repositories.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -37,8 +38,12 @@ class TransactionRepositoryImpl(
         ).flow
         .map { paging -> paging.map { it.toDomain() } }
 
-    override suspend fun add(tx: Transaction): Long =
-        db.transactionDao().upsert(tx.toEntity())
+    @androidx.room.Transaction
+    override suspend fun add(tx: Transaction): Long {
+        val delta = if (tx.type == TxType.INCOME) tx.amountMinor else -tx.amountMinor
+        db.accountDao().applyTransactionDelta(tx.accountId, delta)
+        return db.transactionDao().upsert(tx.toEntity())
+    }
 
     override suspend fun delete(id: Long) =
         db.transactionDao().delete(id)
