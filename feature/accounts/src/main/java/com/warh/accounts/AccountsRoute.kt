@@ -1,5 +1,6 @@
 package com.warh.accounts
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,15 +27,18 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -51,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -84,7 +89,7 @@ fun AccountsRoute(
     val ui by vm.ui.collectAsStateWithLifecycle()
 
     SideEffect {
-        setFab(FabSpec(visible = ui.draft == null, onClick = vm::startAdd) {
+        setFab(FabSpec(visible = ui.draft == null && ui.accounts.isNotEmpty(), onClick = vm::startAdd) {
             Icon(Icons.Default.Add, null)
         })
     }
@@ -149,102 +154,115 @@ private fun AccountsScreen(
         },
         snackbarHost = { SnackbarHost(snackBar) }
     ) { inner ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start  = inner.calculateStartPadding(layoutDir),
-                    top    = inner.calculateTopPadding(),
-                    end    = inner.calculateEndPadding(layoutDir),
-                    bottom = 0.dp,
-                )
-                .nestedScroll(topSb.nestedScrollConnection)
-                .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                AccountsRingByCurrency(
-                    accounts = ui.accounts,
-                    totals   = ui.totalsByCurrency,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                )
-            }
+        val showEmpty = ui.accounts.isEmpty() && ui.draft == null
 
-            ui.draft?.let { d ->
+        if (showEmpty) {
+            AccountsEmptyState(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start  = inner.calculateStartPadding(layoutDir),
+                        top    = inner.calculateTopPadding(),
+                        end    = inner.calculateEndPadding(layoutDir),
+                        bottom = 0.dp
+                    ),
+                onPrimaryAction = { /* TODO: Navegar a ADD Account */ }
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start  = inner.calculateStartPadding(layoutDir),
+                        top    = inner.calculateTopPadding(),
+                        end    = inner.calculateEndPadding(layoutDir),
+                        bottom = 0.dp,
+                    )
+                    .nestedScroll(topSb.nestedScrollConnection)
+                    .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 item {
-                    AccountEditorCard(
-                        draft = d,
-                        onName = onName,
-                        onType = onType,
-                        onCurrency = onCurrency,
-                        onBalanceText = onBalanceText,
-                        onIconIndex = onIconIndex,
-                        onIconColor = onIconColor,
-                        onCancel = onCancel,
-                        onSave = { onSave(show) }
+                    AccountsRingByCurrency(
+                        accounts = ui.accounts,
+                        totals   = ui.totalsByCurrency
                     )
                 }
-            }
 
-            items(ui.accounts, key = { it.id!! }) { acc ->
-                val cs = MaterialTheme.colorScheme
-                val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
-                val tint = acc.iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
-                val balanceText = formatMajor(acc.balance, acc.currency)
-                val balanceColor = if (acc.balance > 0L) Color(0xFF2E7D32) else cs.error
+                ui.draft?.let { d ->
+                    item {
+                        AccountEditorCard(
+                            draft = d,
+                            onName = onName,
+                            onType = onType,
+                            onCurrency = onCurrency,
+                            onBalanceText = onBalanceText,
+                            onIconIndex = onIconIndex,
+                            onIconColor = onIconColor,
+                            onCancel = onCancel,
+                            onSave = { onSave(show) }
+                        )
+                    }
+                }
 
-                ElevatedCard(
-                    onClick = { acc.id?.let(onAccountClick) },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = cs.secondaryContainer
-                    ),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                items(ui.accounts, key = { it.id!! }) { acc ->
+                    val cs = MaterialTheme.colorScheme
+                    val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
+                    val tint = acc.iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
+                    val balanceText = formatMajor(acc.balance, acc.currency)
+                    val balanceColor = if (acc.balance > 0L) Color(0xFF2E7D32) else cs.error
+
+                    ElevatedCard(
+                        onClick = { acc.id?.let(onAccountClick) },
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = cs.secondaryContainer
+                        ),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp)
+                            .padding(horizontal = 12.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(iconIds[idx]),
-                            contentDescription = null,
-                            tint = tint
-                        )
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            modifier = Modifier.weight(1f)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
                         ) {
-                            Text(
-                                text = acc.name,
-                                style = MaterialTheme.typography.titleMedium
+                            Icon(
+                                painter = painterResource(iconIds[idx]),
+                                contentDescription = null,
+                                tint = tint
                             )
-                            Text(
-                                text = acc.type.localized(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = cs.onSecondaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
 
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = balanceText,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = balanceColor
-                            )
-                            Text(
-                                text = acc.currency,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = cs.onSecondaryContainer.copy(alpha = 0.8f)
-                            )
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = acc.name,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = acc.type.localized(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = balanceText,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = balanceColor
+                                )
+                                Text(
+                                    text = acc.currency,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }
@@ -254,10 +272,64 @@ private fun AccountsScreen(
 }
 
 @Composable
+private fun AccountsEmptyState(
+    modifier: Modifier = Modifier,
+    onPrimaryAction: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier.padding(horizontal = 24.dp).padding(top = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ElevatedCard(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = cs.surfaceContainerLowest
+            ),
+            elevation = CardDefaults.elevatedCardElevation(2.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(220.dp)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(CommonDrawables.accounts_empty_img),
+                    contentDescription = null,
+                    modifier = Modifier.size(132.dp),
+                    contentScale = ContentScale.FillBounds
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = stringResource(R.string.accounts_empty_title),
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.accounts_empty_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = cs.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Button(onClick = onPrimaryAction) {
+            Text(stringResource(R.string.accounts_empty_cta))
+        }
+    }
+}
+
+@Composable
 private fun AccountsRingByCurrency(
     accounts: List<Account>,
     totals: List<CurrencyTotalUi>,
-    modifier: Modifier = Modifier
 ) {
     val currencyChips = remember(totals, accounts) {
         val fromTotals = totals.map { it.currency }
@@ -266,23 +338,6 @@ private fun AccountsRingByCurrency(
     if (currencyChips.isEmpty()) return
 
     val cs = MaterialTheme.colorScheme
-
-    val chipColors = FilterChipDefaults.filterChipColors(
-        containerColor = cs.surfaceVariant.copy(alpha = 0.55f),
-        labelColor = cs.onSurfaceVariant,
-        iconColor = cs.onSurfaceVariant,
-
-        selectedContainerColor = cs.primaryContainer,
-        selectedLabelColor = cs.onPrimaryContainer,
-        selectedLeadingIconColor = cs.onPrimaryContainer,
-        selectedTrailingIconColor = cs.onPrimaryContainer,
-
-        disabledContainerColor = cs.surfaceVariant.copy(alpha = 0.24f),
-        disabledLabelColor = cs.onSurfaceVariant.copy(alpha = 0.38f),
-        disabledLeadingIconColor = cs.onSurfaceVariant.copy(alpha = 0.38f),
-        disabledTrailingIconColor = cs.onSurfaceVariant.copy(alpha = 0.38f),
-        disabledSelectedContainerColor = cs.primaryContainer.copy(alpha = 0.38f)
-    )
 
     var selectedCode by remember(currencyChips) { mutableStateOf(currencyChips.first()) }
     LaunchedEffect(currencyChips) {
@@ -342,30 +397,26 @@ private fun AccountsRingByCurrency(
         { key -> nameToColor[key] ?: cs.onSurfaceVariant }
     }
 
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            currencyChips.forEach { code ->
-                FilterChip(
-                    selected = code == selectedCode,
-                    onClick = {
-                        selectedCode = code
-                        selectedSlice = null
-                        lastTapAngle = null
-                    },
-                    label = { Text(code) },
-                    colors = chipColors,
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = code == selectedCode,
-                        borderColor = cs.outline,
-                        selectedBorderColor = Color.Transparent
-                    ),
-                    shape = CircleShape
-                )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp)
+    ) {
+        if (currencyChips.count() > 4) {
+            CurrencyTabs(currencyChips, selectedCode) { code ->
+                selectedCode = code; selectedSlice = null; lastTapAngle = null
             }
+        } else {
+            CurrencySegmented(
+                options = currencyChips,
+                selected = selectedCode,
+                onSelect = { x ->
+                    selectedCode = x
+                    selectedSlice = null
+                    lastTapAngle = null
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
 
         Box(
@@ -397,6 +448,43 @@ private fun AccountsRingByCurrency(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CurrencySegmented(
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SingleChoiceSegmentedButtonRow(modifier) {
+        options.forEachIndexed { i, code ->
+            SegmentedButton(
+                selected = code == selected,
+                onClick = { onSelect(code) },
+                shape = SegmentedButtonDefaults.itemShape(i, options.size),
+                label = { Text(code) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CurrencyTabs(
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
+    ScrollableTabRow(selectedTabIndex = selectedIndex, edgePadding = 16.dp) {
+        options.forEachIndexed { i, code ->
+            Tab(
+                selected = i == selectedIndex,
+                onClick = { onSelect(code) },
+                text = { Text(code) }
+            )
         }
     }
 }
@@ -625,6 +713,22 @@ fun AccountsScreenPreview_Draft_Dark() {
             onCancel = {},
             onSave = {}
         )
+    }
+}
+
+@Preview(name = "Accounts — Empty (Light)", showBackground = true)
+@Composable
+fun AccountsScreenPreview_Empty_Light() {
+    ExpenseTheme(dark = false) {
+        AccountsEmptyState(onPrimaryAction = {})
+    }
+}
+
+@Preview(name = "Accounts — Empty (Dark)", showBackground = true)
+@Composable
+fun AccountsScreenPreview_Empty_Dark() {
+    ExpenseTheme(dark = true) {
+        AccountsEmptyState(onPrimaryAction = {})
     }
 }
 

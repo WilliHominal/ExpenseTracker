@@ -46,8 +46,8 @@ fun buildDatabase(context: Context): AppDatabase =
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 //TODO - Sacar las accounts+txs luego
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,12500,1,null)")
-                db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',10,10,2,null)")
+                //db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,12500,1,null)")
+                //db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',10,10,2,null)")
 
                 val expenseSeeds = listOf(
                     Category(0, context.getString(R.string.cat_food),          iconIndex = 0,  iconColorArgb = 0xFFE57373, type = TxType.EXPENSE),
@@ -96,14 +96,14 @@ fun buildDatabase(context: Context): AppDatabase =
                 val nowStr = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 val ymStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM"))
 
-                db.execSQL(
+                /*db.execSQL(
                     """
                     INSERT INTO transactions(id,accountId,type,amountMinor,currency,date,yearMonth,categoryId,merchant,note) VALUES
                     (1,1,'INCOME',25000,'ARS','$nowStr','$ymStr',15,'Sueldo','Sueldo del trabajo'),
                     (2,1,'EXPENSE',12500,'ARS','$nowStr','$ymStr',1,'Café','Latte y medialuna'),
                     (3,2,'INCOME',10000,'USD','$nowStr','$ymStr',17,'Transferencia','Recibo de dólares')
                     """.trimIndent()
-                )
+                )*/
             }
         })
         .addMigrations()

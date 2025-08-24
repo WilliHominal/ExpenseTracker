@@ -3,7 +3,12 @@
     <!-- Titles -->
     <string name="accounts_title">Accounts</string>
 
-    <string name="accounts_totals_title">Total balance</string>
+    <!-- Empty Account -->
+    <string name="accounts_empty_title">No hay cuentas aún</string>
+    <string name="accounts_empty_subtitle">Creá tu primera cuenta para ver el resumen y empezar a registrar movimientos.</string>
+    <string name="accounts_empty_cta">Crear primera cuenta</string>
+
+    <string name="accounts_totals_title">Balance</string>
 
     <!-- Editor fields -->
     <string name="accounts_name_label">Account name</string>

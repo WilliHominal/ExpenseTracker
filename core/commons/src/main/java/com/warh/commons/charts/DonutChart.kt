@@ -1,6 +1,7 @@
 // DonutChart.kt
 package com.warh.commons.charts
 
+import android.graphics.Paint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -66,7 +67,7 @@ fun DonutChart(
     val labelMargin= with(density) { DonutChartDesign.Dimensions.LabelMarginDp.toPx() }
 
     val labelPaint = remember(labelColor, labelPx) {
-        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = labelColor.toArgb()
             textSize = labelPx
         }

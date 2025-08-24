@@ -22,7 +22,7 @@ object DonutChartDesign {
     }
 
     object Layout {
-        private val RingHeight: Dp = 200.dp
+        private val RingHeight: Dp = 180.dp
         fun canvasHeight(gutters: Int = 2): Dp = RingHeight + Dimensions.Gutter * gutters
     }
 
