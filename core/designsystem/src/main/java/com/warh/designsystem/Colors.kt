@@ -6,13 +6,13 @@ object ColorTokens {
     object Light {
         val Primary            = Color(0xFFD33E4C)
         val OnPrimary          = Color(0xFFFFFFFF)
-        val PrimaryContainer   = Color(0xFFD33E4C) //Color del fondo de la bottom bar 0xFFFFD8DD
-        val OnPrimaryContainer = Color(0xFFFFFFFF) //Color del icono del FAB 0xFF5F0B14
+        val PrimaryContainer   = Color(0xFFD33E4C)
+        val OnPrimaryContainer = Color(0xFFFFFFFF)
 
         val Secondary            = Color(0xFF9E4A55)
         val OnSecondary          = Color(0xFFFFFFFF)
-        val SecondaryContainer   = Color(0xFFFFE6EA) //Color del fondo del icono seleccionado de la bottom bar
-        val OnSecondaryContainer = Color(0xFF4A1820) //Color del icono seleccionado de la bottom bar
+        val SecondaryContainer   = Color(0xFFFFE6EA)
+        val OnSecondaryContainer = Color(0xFF4A1820)
 
         val Tertiary            = Color(0xFF56B8A6)
         val OnTertiary          = Color(0xFF003730)
@@ -28,9 +28,9 @@ object ColorTokens {
         val OnBackground        = Color(0xFF201A1C)
 
         val Surface             = Color(0xFFFFF7F8)
-        val OnSurface           = Color(0xFF211A1C) //Color del texto seleccionado de la bottom bar
+        val OnSurface           = Color(0xFF211A1C)
         val SurfaceVariant      = Color(0xFFF4D7DB)
-        val OnSurfaceVariant    = Color(0xFF534346) //Color de iconos sin elegir en bottom bar
+        val OnSurfaceVariant    = Color(0xFF534346)
 
         val SurfaceContainerLowest  = Color(0xFFFFF7F8)
         val SurfaceContainerLow     = Color(0xFFFFF4F6)
