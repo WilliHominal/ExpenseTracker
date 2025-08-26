@@ -1,6 +1,13 @@
 package com.warh.expensetracker
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -15,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.warh.commons.bottom_bar.FabSpec
@@ -22,6 +30,7 @@ import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.commons.scroll_utils.rememberHideOnScrollState
 import com.warh.designsystem.ExpenseTheme
 import com.warh.designsystem.SyncSystemBarsWithTheme
+import com.warh.designsystem.bottom_bar.BottomBarDesign
 
 //TODO: Acomodar un poco el diseño segun el de v0
 
@@ -29,7 +38,7 @@ import com.warh.designsystem.SyncSystemBarsWithTheme
 fun App() {
     val nav = rememberNavController()
 
-    ExpenseTheme {
+    ExpenseTheme(false /*TODO: Sacar cuando esten definidos los colores dark*/) {
         SyncSystemBarsWithTheme()
 
         val backStackEntry by nav.currentBackStackEntryAsState()
@@ -63,6 +72,10 @@ fun App() {
                             onMeasuredHeight = hideBar::setMeasuredHeight,
                             isSettling = hideBar.isSettling,
                         )
+                    } else {
+                        BottomSystemArea(
+                            onMeasuredHeight = hideBar::setMeasuredHeight
+                        )
                     }
                 },
                 floatingActionButton = {
@@ -84,4 +97,23 @@ fun App() {
             }
         }
     }
+}
+
+@Composable
+private fun BottomSystemArea(
+    onMeasuredHeight: (Int) -> Unit = {}
+) {
+    val navInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)
+    val density = LocalDensity.current
+    val bottomPx = navInsets.getBottom(density)
+    val bottomDp = with(density) { bottomPx.toDp() }
+
+    LaunchedEffect(bottomPx) { onMeasuredHeight(bottomPx) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(bottomDp)
+            .background(BottomBarDesign.Colors.containerColor())
+    )
 }

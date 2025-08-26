@@ -58,6 +58,7 @@ fun MainNavHost(
 
         composableAnimated(Destinations.ACCOUNT_ADD) {
             AccountAddRoute(
+                setFab = setFab,
                 onBack = { navController.navigateUp() }
             )
         }
@@ -65,7 +66,7 @@ fun MainNavHost(
         composableAnimated(Destinations.ADD_TRANSACTION) {
             AddEditTransactionRoute(
                 setFab = setFab,
-                onSaved = { navController.popBackStack() },
+                onSaved = { navController.navigateUp() },
                 onBack = { navController.navigateUp() }
             )
         }

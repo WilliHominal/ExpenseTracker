@@ -75,4 +75,8 @@
     <string name="account_add_new_placeholder">Nueva cuenta</string>
     <string name="account_add_summary">Saldo inicial: %1$s %2$s</string>
     <string name="account_add_error_name_required">El nombre es obligatorio</string>
+    <string name="account_add_save_button">Guardar</string>
+    <string name="account_add_save_button_loading">Guardando…</string>
+    <string name="account_add_error_default">No se pudo guardar la cuenta</string>
+
 </resources>

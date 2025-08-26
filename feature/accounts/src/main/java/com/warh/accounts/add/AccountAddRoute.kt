@@ -5,8 +5,10 @@ import com.warh.accounts.localized
 import com.warh.commons.TopBarDefault
 import com.warh.commons.icons.IconGrid
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -31,12 +33,14 @@ import com.warh.accounts.R
 import com.warh.commons.color_picker.ColorChooser
 import com.warh.accounts.utils.BalanceUtils.parseMinor
 import com.warh.accounts.utils.BalanceUtils.formatMajor
+import com.warh.commons.bottom_bar.FabSpec
 import java.util.Currency
 import com.warh.commons.R.drawable as CommonDrawables
 
 @Composable
 fun AccountAddRoute(
     vm: AccountAddViewModel = koinViewModel(),
+    setFab: (FabSpec?) -> Unit,
     onBack: () -> Unit
 ) {
     val ui by vm.ui.collectAsState()
@@ -44,22 +48,33 @@ fun AccountAddRoute(
     val scope = rememberCoroutineScope()
     val show: (String) -> Unit = { msg -> scope.launch { snack.showSnackbar(msg) } }
 
+    SideEffect {
+        setFab(
+            FabSpec(
+                visible = true,
+                onClick = { vm.save(onError = show, onDone = onBack) }
+            ) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    text = stringResource(
+                        if (ui.isSaving) R.string.account_add_save_button_loading
+                        else R.string.account_add_save_button
+                    )
+                )
+            }
+        )
+    }
+
     AddAccountScreen(
         ui = ui,
-        onName = vm::onName,
-        onType = vm::onType,
-        onCurrency = vm::onCurrency,
-        onBalanceText = vm::onBalanceText,
-        onIconIndex = vm::onIconIndex,
-        onIconColor = vm::onIconColor,
-        onBack = onBack,
-        onSave = {
-            vm.save(
-                onError = show,
-                onDone = onBack
-            )
-        },
-        snackBar = snack
+        onName       = vm::onName,
+        onType       = vm::onType,
+        onCurrency   = vm::onCurrency,
+        onBalanceText= vm::onBalanceText,
+        onIconIndex  = vm::onIconIndex,
+        onIconColor  = vm::onIconColor,
+        onBack       = onBack,
+        snackBar     = snack
     )
 }
 
@@ -74,43 +89,23 @@ private fun AddAccountScreen(
     onIconIndex: (Int) -> Unit,
     onIconColor: (Long?) -> Unit,
     onBack: () -> Unit,
-    onSave: () -> Unit,
     snackBar: SnackbarHostState
 ) {
     val scroll = rememberTopAppBarState()
     val sb = pinnedScrollBehavior(scroll)
-    val cs = MaterialTheme.colorScheme
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
             TopBarDefault(
                 title = stringResource(R.string.account_add_title),
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
                 },
                 scrollBehavior = sb
             )
-        },
-        bottomBar = {
-            Surface(tonalElevation = 2.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onBack,
-                        modifier = Modifier.weight(1f)
-                    ) { Text(stringResource(R.string.accounts_cancel)) }
-
-                    Button(
-                        onClick = onSave,
-                        enabled = ui.name.isNotBlank(),
-                        modifier = Modifier.weight(1f)
-                    ) { Text(stringResource(R.string.accounts_save)) }
-                }
-            }
         },
         snackbarHost = { SnackbarHost(snackBar) }
     ) { inner ->
@@ -118,7 +113,9 @@ private fun AddAccountScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
-                .nestedScroll(sb.nestedScrollConnection),
+                .nestedScroll(sb.nestedScrollConnection)
+                .verticalScroll(scrollState)
+                .padding(top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HeroPreviewCard(
@@ -234,13 +231,9 @@ private fun AddAccountScreen(
                     onChange = onIconColor
                 )
 
-                Spacer(Modifier.height(12.dp))
-                AssistiveSummary(
-                    currency = ui.currency,
-                    balanceText = ui.balanceText,
-                    color = cs.onSurfaceVariant
-                )
                 Spacer(Modifier.height(8.dp))
+
+                ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         }
     }
@@ -327,17 +320,6 @@ private fun HeroPreviewCard(
 }
 
 @Composable
-private fun AssistiveSummary(currency: String, balanceText: String, color: Color) {
-    val parsed = runCatching { parseMinor(balanceText, currency) }.getOrDefault(0L)
-    val formatted = formatMajor(parsed, currency)
-    Text(
-        text = stringResource(R.string.account_add_summary, currency, formatted),
-        style = MaterialTheme.typography.bodySmall,
-        color = color
-    )
-}
-
-@Composable
 private fun AccountIconGrid(
     selectedNumber: Int,
     onSelectNumber: (Int) -> Unit,
@@ -368,7 +350,7 @@ private fun AddAccountPreviewLight() {
         AddAccountScreen(
             ui = AccountAddUiState(),
             onName = {}, onType = {}, onCurrency = {}, onBalanceText = {},
-            onIconIndex = {}, onIconColor = {}, onBack = {}, onSave = {}, snackBar = SnackbarHostState()
+            onIconIndex = {}, onIconColor = {}, onBack = {}, snackBar = SnackbarHostState()
         )
     }
 }
@@ -380,7 +362,7 @@ private fun AddAccountPreviewDark() {
         AddAccountScreen(
             ui = AccountAddUiState(),
             onName = {}, onType = {}, onCurrency = {}, onBalanceText = {},
-            onIconIndex = {}, onIconColor = {}, onBack = {}, onSave = {}, snackBar = SnackbarHostState()
+            onIconIndex = {}, onIconColor = {}, onBack = {}, snackBar = SnackbarHostState()
         )
     }
 }

@@ -75,4 +75,7 @@
     <string name="account_add_new_placeholder">New account</string>
     <string name="account_add_summary">Initial Balance: %1$s %2$s</string>
     <string name="account_add_error_name_required">The name is required</string>
+    <string name="account_add_save_button">Save</string>
+    <string name="account_add_save_button_loading">Saving…</string>
+    <string name="account_add_error_default">Failed to create the account</string>
 </resources>

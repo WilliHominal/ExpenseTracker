@@ -14,14 +14,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-
 data class AccountAddUiState(
     val name: String = "",
     val type: AccountType = AccountType.CASH,
     val currency: String = defaultCurrency(),
     val balanceText: String = "",
     val iconIndex: Int = 1,
-    val iconColorArgb: Long? = null
+    val iconColorArgb: Long? = null,
+    val isSaving: Boolean = false,
+    val error: String? = null
 )
 
 private fun defaultCurrency(): String =
@@ -48,21 +49,31 @@ class AccountAddViewModel(
         val name = d.name.trim()
         if (name.isBlank()) {
             onError(strings[R.string.account_add_error_name_required])
+            _ui.update { it.copy(error = strings[R.string.account_add_error_name_required]) }
             return
         }
         viewModelScope.launch {
-            val initial = parseMinor(d.balanceText, d.currency)
-            val account = Account(
-                name = name,
-                type = d.type,
-                currency = d.currency,
-                initialBalance = initial,
-                balance = initial,
-                iconIndex = d.iconIndex,
-                iconColorArgb = d.iconColorArgb
-            )
-            upsert(account)
-            onDone()
+            _ui.update { it.copy(isSaving = true, error = null) }
+            val result = runCatching {
+                val initial = parseMinor(d.balanceText, d.currency)
+                val account = Account(
+                    name = name,
+                    type = d.type,
+                    currency = d.currency,
+                    initialBalance = initial,
+                    balance = initial,
+                    iconIndex = d.iconIndex,
+                    iconColorArgb = d.iconColorArgb
+                )
+                upsert(account)
+            }
+            _ui.update { it.copy(isSaving = false) }
+            result.onSuccess { onDone() }
+                .onFailure { e ->
+                    val msg = e.message ?: strings[R.string.account_add_error_default]
+                    _ui.update { it.copy(error = msg) }
+                    onError(msg)
+                }
         }
     }
 
