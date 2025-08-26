@@ -15,22 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SegmentedButton
@@ -40,7 +33,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -49,7 +41,6 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,8 +51,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,13 +60,10 @@ import com.warh.commons.bottom_bar.FabSpec
 import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.commons.charts.DonutChart
 import com.warh.commons.charts.DonutSlice
-import com.warh.commons.color_picker.ColorChooser
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import java.util.Currency
 import com.warh.commons.R.drawable as CommonDrawables
 
 @Composable
@@ -85,11 +71,12 @@ fun AccountsRoute(
     vm: AccountsViewModel = koinViewModel(),
     setFab: (FabSpec?) -> Unit,
     onAccountClick: (Long) -> Unit,
+    onNavigateToAdd: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
 
     SideEffect {
-        setFab(FabSpec(visible = ui.draft == null && ui.accounts.isNotEmpty(), onClick = vm::startAdd) {
+        setFab(FabSpec(visible = ui.accounts.isNotEmpty(), onClick = onNavigateToAdd) {
             Icon(Icons.Default.Add, null)
         })
     }
@@ -97,14 +84,7 @@ fun AccountsRoute(
     AccountsScreen(
         ui = ui,
         onAccountClick = onAccountClick,
-        onName = vm::onName,
-        onType = vm::onType,
-        onCurrency = vm::onCurrency,
-        onBalanceText = vm::onBalanceText,
-        onIconIndex = vm::onIconIndex,
-        onIconColor = vm::onIconColor,
-        onCancel = vm::cancelEdit,
-        onSave = { show -> vm.saveEdit(onError = show) }
+        onNavigateToAdd = onNavigateToAdd,
     )
 }
 
@@ -113,14 +93,7 @@ fun AccountsRoute(
 private fun AccountsScreen(
     ui: AccountsUiState,
     onAccountClick: (Long) -> Unit,
-    onName: (String) -> Unit,
-    onType: (AccountType) -> Unit,
-    onCurrency: (String) -> Unit,
-    onBalanceText: (String) -> Unit,
-    onIconIndex: (Int) -> Unit,
-    onIconColor: (Long?) -> Unit,
-    onCancel: () -> Unit,
-    onSave: ((String) -> Unit) -> Unit
+    onNavigateToAdd: () -> Unit,
 ) {
     val layoutDir = LocalLayoutDirection.current
     val bottomSb = LocalBottomBarBehavior.current
@@ -128,13 +101,6 @@ private fun AccountsScreen(
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
 
     val snackBar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val show: (String) -> Unit = { msg -> scope.launch { snackBar.showSnackbar(msg) } }
-
-    val hasDraft = ui.draft != null
-    LaunchedEffect(hasDraft) {
-        if (!hasDraft) bottomSb?.reset()
-    }
 
     val iconIds = remember {
         listOf(
@@ -154,7 +120,7 @@ private fun AccountsScreen(
         },
         snackbarHost = { SnackbarHost(snackBar) }
     ) { inner ->
-        val showEmpty = ui.accounts.isEmpty() && ui.draft == null
+        val showEmpty = ui.accounts.isEmpty()
 
         if (showEmpty) {
             AccountsEmptyState(
@@ -166,7 +132,7 @@ private fun AccountsScreen(
                         end    = inner.calculateEndPadding(layoutDir),
                         bottom = 0.dp
                     ),
-                onPrimaryAction = { /* TODO: Navegar a ADD Account */ }
+                onPrimaryAction = onNavigateToAdd
             )
         } else {
             LazyColumn(
@@ -187,22 +153,6 @@ private fun AccountsScreen(
                         accounts = ui.accounts,
                         totals   = ui.totalsByCurrency
                     )
-                }
-
-                ui.draft?.let { d ->
-                    item {
-                        AccountEditorCard(
-                            draft = d,
-                            onName = onName,
-                            onType = onType,
-                            onCurrency = onCurrency,
-                            onBalanceText = onBalanceText,
-                            onIconIndex = onIconIndex,
-                            onIconColor = onIconColor,
-                            onCancel = onCancel,
-                            onSave = { onSave(show) }
-                        )
-                    }
                 }
 
                 items(ui.accounts, key = { it.id!! }) { acc ->
@@ -337,6 +287,7 @@ private fun AccountsRingByCurrency(
     }
     if (currencyChips.isEmpty()) return
 
+    val showSelector = currencyChips.size > 1
     val cs = MaterialTheme.colorScheme
 
     var selectedCode by remember(currencyChips) { mutableStateOf(currencyChips.first()) }
@@ -402,21 +353,23 @@ private fun AccountsRingByCurrency(
             .fillMaxWidth()
             .padding(top = 12.dp)
     ) {
-        if (currencyChips.count() > 4) {
-            CurrencyTabs(currencyChips, selectedCode) { code ->
-                selectedCode = code; selectedSlice = null; lastTapAngle = null
+        if (showSelector) {
+            if (currencyChips.count() > 4) {
+                CurrencyTabs(currencyChips, selectedCode) { code ->
+                    selectedCode = code; selectedSlice = null; lastTapAngle = null
+                }
+            } else {
+                CurrencySegmented(
+                    options = currencyChips,
+                    selected = selectedCode,
+                    onSelect = { x ->
+                        selectedCode = x
+                        selectedSlice = null
+                        lastTapAngle = null
+                    },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
-        } else {
-            CurrencySegmented(
-                options = currencyChips,
-                selected = selectedCode,
-                onSelect = { x ->
-                    selectedCode = x
-                    selectedSlice = null
-                    lastTapAngle = null
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
         }
 
         Box(
@@ -489,157 +442,6 @@ private fun CurrencyTabs(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AccountEditorCard(
-    draft: AccountDraft,
-    onName: (String) -> Unit,
-    onType: (AccountType) -> Unit,
-    onCurrency: (String) -> Unit,
-    onBalanceText: (String) -> Unit,
-    onIconIndex: (Int) -> Unit,
-    onIconColor: (Long?) -> Unit,
-    onCancel: () -> Unit,
-    onSave: () -> Unit
-) {
-    Card(Modifier.fillMaxWidth().padding(12.dp)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
-            OutlinedTextField(
-                value = draft.name,
-                onValueChange = onName,
-                label = { Text(stringResource(R.string.accounts_name_label)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            var typeExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(expanded = typeExpanded, onExpandedChange = { typeExpanded = it }) {
-                OutlinedTextField(
-                    value = draft.type.localized(),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.accounts_type_label)) },
-                    modifier = Modifier
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                    AccountType.entries.forEach { t ->
-                        DropdownMenuItem(
-                            text = { Text(t.localized()) },
-                            onClick = { onType(t); typeExpanded = false }
-                        )
-                    }
-                }
-            }
-
-            val currencies = remember {
-                listOf("ARS","USD","EUR","BRL","CLP","UYU","MXN")
-            }
-            var curExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(expanded = curExpanded, onExpandedChange = { curExpanded = it }) {
-                OutlinedTextField(
-                    value = draft.currency,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.accounts_currency_label)) },
-                    modifier = Modifier
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(expanded = curExpanded, onDismissRequest = { curExpanded = false }) {
-                    currencies.forEach { code ->
-                        DropdownMenuItem(
-                            text = { Text(code) },
-                            onClick = { onCurrency(code); curExpanded = false }
-                        )
-                    }
-                }
-            }
-
-            val digits = remember(draft.currency) {
-                runCatching { Currency.getInstance(draft.currency).defaultFractionDigits }
-                    .getOrDefault(2).coerceAtLeast(0)
-            }
-
-            OutlinedTextField(
-                value = draft.balanceText,
-                onValueChange = onBalanceText,
-                label = { Text(stringResource(R.string.accounts_initial_balance_label, draft.currency)) },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = if (digits == 0) KeyboardType.Number else KeyboardType.Decimal,
-                    imeAction = ImeAction.Done
-                ),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(stringResource(R.string.accounts_icon_label), style = MaterialTheme.typography.labelLarge)
-            IconGrid(
-                selected = draft.iconIndex,
-                onSelect = onIconIndex
-            )
-
-            Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.accounts_color_label), style = MaterialTheme.typography.labelLarge)
-            ColorChooser(
-                selected = draft.iconColorArgb,
-                onChange = onIconColor
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                TextButton(onClick = onCancel) { Text(stringResource(R.string.accounts_cancel)) }
-                Button(
-                    onClick = onSave,
-                    enabled = draft.name.isNotBlank()
-                ) { Text(stringResource(R.string.accounts_save)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun IconGrid(selected: Int, onSelect: (Int) -> Unit) {
-    val icons = listOf(
-        CommonDrawables.account_icon_1, CommonDrawables.account_icon_2, CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
-        CommonDrawables.account_icon_5, CommonDrawables.account_icon_6, CommonDrawables.account_icon_7, CommonDrawables.account_icon_8
-    )
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (row in 0 until 2) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                for (col in 0 until 4) {
-                    val idx = row * 4 + col
-                    val number = idx + 1
-                    val isSel = number == selected
-                    ElevatedCard(
-                        onClick = { onSelect(number) },
-                        shape = CircleShape,
-                        modifier = Modifier.size(44.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = if (isSel) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(icons[idx]),
-                                contentDescription = null,
-                                tint = if (isSel) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 @Preview(name = "Accounts — List (Light)", showBackground = true)
 @Composable
 fun AccountsScreenPreview_List_Light() {
@@ -647,14 +449,7 @@ fun AccountsScreenPreview_List_Light() {
         AccountsScreen(
             ui = uiListState(),
             onAccountClick = {},
-            onName = {},
-            onType = {},
-            onCurrency = {},
-            onBalanceText = {},
-            onIconIndex = {},
-            onIconColor = {},
-            onCancel = {},
-            onSave = {}
+            onNavigateToAdd = {},
         )
     }
 }
@@ -666,52 +461,7 @@ fun AccountsScreenPreview_List_Dark() {
         AccountsScreen(
             ui = uiListState(),
             onAccountClick = {},
-            onName = {},
-            onType = {},
-            onCurrency = {},
-            onBalanceText = {},
-            onIconIndex = {},
-            onIconColor = {},
-            onCancel = {},
-            onSave = {}
-        )
-    }
-}
-
-@Preview(name = "Accounts — Draft (Light)", showBackground = true)
-@Composable
-fun AccountsScreenPreview_Draft_Light() {
-    ExpenseTheme(dark = false) {
-        AccountsScreen(
-            ui = uiDraftState(),
-            onAccountClick = {},
-            onName = {},
-            onType = {},
-            onCurrency = {},
-            onBalanceText = {},
-            onIconIndex = {},
-            onIconColor = {},
-            onCancel = {},
-            onSave = {}
-        )
-    }
-}
-
-@Preview(name = "Accounts — Draft (Dark)", showBackground = true)
-@Composable
-fun AccountsScreenPreview_Draft_Dark() {
-    ExpenseTheme(dark = true) {
-        AccountsScreen(
-            ui = uiDraftState(),
-            onAccountClick = {},
-            onName = {},
-            onType = {},
-            onCurrency = {},
-            onBalanceText = {},
-            onIconIndex = {},
-            onIconColor = {},
-            onCancel = {},
-            onSave = {}
+            onNavigateToAdd = {},
         )
     }
 }
@@ -740,23 +490,8 @@ private fun sampleAccounts(): List<Account> = listOf(
 
 private fun uiListState() = AccountsUiState(
     accounts = sampleAccounts(),
-    draft = null,
     totalsByCurrency = listOf(
         CurrencyTotalUi("ARS", 77_500),
         CurrencyTotalUi("USD", 125_000)
     )
-)
-
-private fun uiDraftState() = AccountsUiState(
-    accounts = sampleAccounts(),
-    draft = AccountDraft(
-        id = null,
-        name = "Nueva cuenta",
-        type = AccountType.BANK,
-        currency = "ARS",
-        balanceText = "1000",
-        iconIndex = 2,
-        iconColorArgb = null
-    ),
-    totalsByCurrency = uiListState().totalsByCurrency
 )

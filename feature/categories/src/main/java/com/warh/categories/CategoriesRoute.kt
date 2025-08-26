@@ -2,7 +2,6 @@ package com.warh.categories
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -10,17 +9,13 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -59,6 +54,7 @@ import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
 import com.warh.commons.bottom_bar.LocalBottomBarBehavior
 import com.warh.commons.color_picker.ColorChooser
+import com.warh.commons.icons.IconGrid
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Category
 import com.warh.domain.models.TxType
@@ -249,7 +245,7 @@ private fun CategoryEditorCard(
             }
 
             Text(stringResource(R.string.categories_icon_label), style = MaterialTheme.typography.labelLarge)
-            IconGrid(type = draft.type, selected = draft.iconIndex, onSelect = onIconIndex)
+            CategoryIconGrid(type = draft.type, selectedIndex = draft.iconIndex, onSelect = onIconIndex)
 
             Text(stringResource(R.string.categories_color_label), style = MaterialTheme.typography.labelLarge)
             ColorChooser(selected = draft.iconColorArgb, onChange = onIconColor)
@@ -263,43 +259,21 @@ private fun CategoryEditorCard(
 }
 
 @Composable
-private fun IconGrid(type: TxType, selected: Int, onSelect: (Int) -> Unit) {
-    val icons = CategoriesIcons.iconsFor(type)
-    val columns = 6
-    val rows = (icons.size + columns - 1) / columns
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        repeat(rows) { r ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(columns) { c ->
-                    val idx = r * columns + c
-                    if (idx < icons.size) {
-                        val isSel = idx == selected
-                        ElevatedCard(
-                            onClick = { onSelect(idx) },
-                            shape = CircleShape,
-                            modifier = Modifier.size(44.dp),
-                            colors = CardDefaults.elevatedCardColors(
-                                containerColor = if (isSel) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surface
-                            )
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    painter = painterResource(icons[idx]),
-                                    contentDescription = null,
-                                    tint = if (isSel) MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    } else {
-                        Box(Modifier.size(44.dp)) {}
-                    }
-                }
-            }
-        }
-    }
+private fun CategoryIconGrid(
+    type: TxType,
+    selectedIndex: Int?,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    columns: Int = 6
+) {
+    val icons = remember(type) { CategoriesIcons.iconsFor(type) }
+    IconGrid(
+        icons = icons,
+        selectedIndex = selectedIndex,
+        onSelect = onSelect,
+        modifier = modifier,
+        columns = columns
+    )
 }
 
 @Preview(name = "Categories — List (Light)", showBackground = true)

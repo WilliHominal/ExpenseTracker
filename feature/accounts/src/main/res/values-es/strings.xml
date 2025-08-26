@@ -69,4 +69,10 @@
 
     <string name="account_detail_transactions_title">Transacciones</string>
     <string name="account_detail_transaction_fallback">Transacción</string>
+
+    <!-- Account Add -->
+    <string name="account_add_title">Agregar cuenta</string>
+    <string name="account_add_new_placeholder">Nueva cuenta</string>
+    <string name="account_add_summary">Saldo inicial: %1$s %2$s</string>
+    <string name="account_add_error_name_required">El nombre es obligatorio</string>
 </resources>

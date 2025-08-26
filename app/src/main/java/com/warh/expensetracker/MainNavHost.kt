@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.navArgument
 import com.warh.accounts.AccountsRoute
+import com.warh.accounts.add.AccountAddRoute
 import com.warh.accounts.details.AccountDetailRoute
 import com.warh.budgets.BudgetsRoute
 import com.warh.categories.CategoriesRoute
@@ -48,7 +49,16 @@ fun MainNavHost(
                 setFab = setFab,
                 onAccountClick = { accountId ->
                     navController.navigate("${Destinations.ACCOUNT_DETAIL}/$accountId")
+                },
+                onNavigateToAdd = {
+                    navController.navigate(Destinations.ACCOUNT_ADD)
                 }
+            )
+        }
+
+        composableAnimated(Destinations.ACCOUNT_ADD) {
+            AccountAddRoute(
+                onBack = { navController.navigateUp() }
             )
         }
 
