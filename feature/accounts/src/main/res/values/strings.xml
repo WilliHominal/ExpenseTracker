@@ -14,7 +14,8 @@
     <string name="accounts_name_label">Account name</string>
     <string name="accounts_type_label">Type</string>
     <string name="accounts_currency_label">Currency</string>
-    <string name="accounts_initial_balance_label">Initial balance (%1$s)</string>
+    <string name="accounts_currency_search">Search</string>
+    <string name="accounts_initial_balance_label">Initial balance</string>
     <string name="accounts_initial_balance_hint">e.g. 1000.50</string>
 
     <!-- List / actions -->

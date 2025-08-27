@@ -1,20 +1,51 @@
 package com.warh.accounts.add
 
-import androidx.compose.foundation.text.KeyboardOptions
-import com.warh.accounts.localized
-import com.warh.commons.TopBarDefault
-import com.warh.commons.icons.IconGrid
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardDefaults.elevatedCardColors
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
-import androidx.compose.runtime.*
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,17 +56,32 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.warh.accounts.R
+import com.warh.accounts.localized
+import com.warh.accounts.utils.BalanceUtils.parseMinor
+import com.warh.commons.NumberUtils.formatHeroAmount
+import com.warh.commons.TopBarDefault
+import com.warh.commons.bottom_bar.FabSpec
+import com.warh.commons.color_picker.ColorChooser
+import com.warh.commons.icons.IconGrid
+import com.warh.designsystem.ExpenseTheme
+import com.warh.designsystem.dropdown.DropdownColors
+import com.warh.designsystem.dropdown.DropdownColors.DropdownMenuColors.selectedItemBackground
+import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import com.warh.designsystem.ExpenseTheme
-import com.warh.domain.models.AccountType
-import com.warh.accounts.R
-import com.warh.commons.color_picker.ColorChooser
-import com.warh.accounts.utils.BalanceUtils.parseMinor
-import com.warh.accounts.utils.BalanceUtils.formatMajor
-import com.warh.commons.bottom_bar.FabSpec
 import java.util.Currency
+import java.util.Locale
 import com.warh.commons.R.drawable as CommonDrawables
+
+//TODO:addtx - cat separada
+//TODO:accs - letras pal saldo total
+//TODO:accs - padding abajo del ultimo
+//TODO:accs - orden de cuentas
+//TODO:accs - separador de miles en c/cuenta
+//TODO:accs - editar/eliminar al onhold
+//TODO:accs - al cargar tira la empty
+//TODO:txs-empty screen
 
 @Composable
 fun AccountAddRoute(
@@ -144,57 +190,56 @@ private fun AddAccountScreen(
                 var typeExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = it }
+                    onExpandedChange = { typeExpanded = it },
                 ) {
                     OutlinedTextField(
                         value = ui.type.localized(),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.accounts_type_label)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
+                        colors = DropdownColors.dropdownTextFieldColors()
                     )
+
                     ExposedDropdownMenu(
                         expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false }
+                        onDismissRequest = { typeExpanded = false },
+                        shape = DropdownColors.DropdownMenuColors.menuShape(),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 8.dp
                     ) {
                         AccountType.entries.forEach { t ->
+                            val selected = t == ui.type
                             DropdownMenuItem(
                                 text = { Text(t.localized()) },
-                                onClick = { onType(t); typeExpanded = false }
+                                onClick = {
+                                    onType(t)
+                                    typeExpanded = false
+                                },
+                                colors = if (selected)
+                                    DropdownColors.DropdownMenuColors.selectedItemColors()
+                                else
+                                    DropdownColors.DropdownMenuColors.itemColors(),
+                                modifier = if (selected)
+                                    Modifier.selectedItemBackground()
+                                else
+                                    Modifier
                             )
                         }
                     }
                 }
 
-                val currencies = listOf("ARS","USD","EUR","BRL","CLP","UYU","MXN")
                 var curExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
+                CurrencyDropdown(
+                    selected = ui.currency,
+                    onSelect = onCurrency,
                     expanded = curExpanded,
                     onExpandedChange = { curExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = ui.currency,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.accounts_currency_label)) },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = curExpanded,
-                        onDismissRequest = { curExpanded = false }
-                    ) {
-                        currencies.forEach { code ->
-                            DropdownMenuItem(
-                                text = { Text(code) },
-                                onClick = { onCurrency(code); curExpanded = false }
-                            )
-                        }
-                    }
-                }
+                )
 
                 val digits = remember(ui.currency) {
                     runCatching { Currency.getInstance(ui.currency).defaultFractionDigits }
@@ -205,7 +250,7 @@ private fun AddAccountScreen(
                     value = ui.balanceText,
                     onValueChange = onBalanceText,
                     label = {
-                        Text(stringResource(R.string.accounts_initial_balance_label, ui.currency))
+                        Text(stringResource(R.string.accounts_initial_balance_label))
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = if (digits == 0) KeyboardType.Number else KeyboardType.Decimal,
@@ -239,6 +284,102 @@ private fun AddAccountScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CurrencyDropdown(
+    selected: String,
+    onSelect: (String) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
+) {
+    val locale = remember { Locale.getDefault() }
+    val all = remember {
+        Currency.getAvailableCurrencies()
+            .map { it.currencyCode }
+            .distinct()
+            .sorted()
+    }
+
+    val names = remember(all, locale) {
+        all.associateWith { code ->
+            runCatching { Currency.getInstance(code).getDisplayName(locale) }
+                .getOrDefault(code)
+        }
+    }
+
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, all, names) {
+        val q = query.trim()
+        if (q.isBlank()) {
+            all
+        } else {
+            val codeMatches = all.filter { it.startsWith(q, ignoreCase = true) }
+            val nameMatches = all.filter {
+                val n = names[it] ?: it
+                !codeMatches.contains(it) && n.startsWith(q, ignoreCase = true)
+            }
+            (codeMatches + nameMatches)
+        }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.accounts_currency_label)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                .fillMaxWidth(),
+            colors = DropdownColors.dropdownTextFieldColors()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+            shape = DropdownColors.DropdownMenuColors.menuShape(),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            shadowElevation = 8.dp
+        ) {
+            Box(Modifier.padding(8.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.accounts_currency_search)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            HorizontalDivider()
+
+            filtered.take(50).forEach { code ->
+                val selectedItem = code == selected
+                val name = names[code] ?: code
+                val leftText = if (!name.equals(code, ignoreCase = true)) "$code — $name" else code
+
+                DropdownMenuItem(
+                    text = { Text(leftText) },
+                    onClick = {
+                        onSelect(code)
+                        onExpandedChange(false)
+                    },
+                    leadingIcon = { if (selectedItem) Icon(Icons.Default.Check, null) },
+                    colors = if (selectedItem)
+                        DropdownColors.DropdownMenuColors.selectedItemColors()
+                    else
+                        DropdownColors.DropdownMenuColors.itemColors(),
+                    modifier = if (selectedItem) Modifier.selectedItemBackground() else Modifier
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun HeroPreviewCard(
     name: String,
@@ -261,7 +402,7 @@ private fun HeroPreviewCard(
     val tint = iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
 
     val parsed = runCatching { parseMinor(balanceText, currency) }.getOrDefault(0L)
-    val formatted = formatMajor(parsed, currency)
+    val formatted = formatHeroAmount(parsed, currency, Locale.getDefault())
     val positive = parsed >= 0
 
     ElevatedCard(

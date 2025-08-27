@@ -14,7 +14,8 @@
     <string name="accounts_name_label">Nombre de cuenta</string>
     <string name="accounts_type_label">Tipo</string>
     <string name="accounts_currency_label">Moneda</string>
-    <string name="accounts_initial_balance_label">Saldo inicial (%1$s)</string>
+    <string name="accounts_currency_search">Buscar</string>
+    <string name="accounts_initial_balance_label">Saldo inicial</string>
     <string name="accounts_initial_balance_hint">Ej.: 1000.50</string>
 
     <!-- List / actions -->
