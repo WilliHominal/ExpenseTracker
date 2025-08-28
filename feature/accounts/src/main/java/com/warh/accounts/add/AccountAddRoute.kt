@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardDefaults.elevatedCardColors
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,14 +50,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.warh.accounts.R
 import com.warh.accounts.localized
 import com.warh.accounts.utils.BalanceUtils.parseMinor
@@ -74,15 +81,7 @@ import java.util.Currency
 import java.util.Locale
 import com.warh.commons.R.drawable as CommonDrawables
 
-//TODO:addtx - cat separada
-//TODO:accs - letras pal saldo total
-//TODO:accs - padding abajo del ultimo
-//TODO:accs - orden de cuentas
-//TODO:accs - separador de miles en c/cuenta
-//TODO:accs - editar/eliminar al onhold
-//TODO:accs - al cargar tira la empty
-//TODO:txs-empty screen
-
+//TODO: overflow de Long, limite de chars en cuenta (30?)
 @Composable
 fun AccountAddRoute(
     vm: AccountAddViewModel = koinViewModel(),
@@ -293,32 +292,30 @@ private fun CurrencyDropdown(
     onExpandedChange: (Boolean) -> Unit
 ) {
     val locale = remember { Locale.getDefault() }
-    val all = remember {
-        Currency.getAvailableCurrencies()
-            .map { it.currencyCode }
-            .distinct()
-            .sorted()
-    }
-
+    val all = remember { Currency.getAvailableCurrencies().map { it.currencyCode }.distinct().sorted() }
     val names = remember(all, locale) {
-        all.associateWith { code ->
-            runCatching { Currency.getInstance(code).getDisplayName(locale) }
-                .getOrDefault(code)
-        }
+        all.associateWith { code -> runCatching { Currency.getInstance(code).getDisplayName(locale) }.getOrDefault(code) }
     }
 
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, all, names) {
         val q = query.trim()
-        if (q.isBlank()) {
-            all
-        } else {
-            val codeMatches = all.filter { it.startsWith(q, ignoreCase = true) }
-            val nameMatches = all.filter {
-                val n = names[it] ?: it
-                !codeMatches.contains(it) && n.startsWith(q, ignoreCase = true)
-            }
-            (codeMatches + nameMatches)
+        if (q.isBlank()) all
+        else {
+            val byCode = all.filter { it.startsWith(q, ignoreCase = true) }
+            val byName = all.filter { val n = names[it] ?: it; it !in byCode && n.startsWith(q, ignoreCase = true) }
+            byCode + byName
+        }
+    }
+
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val searchFR = remember { FocusRequester() }
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            searchFR.requestFocus()
+            keyboard?.show()
         }
     }
 
@@ -338,9 +335,15 @@ private fun CurrencyDropdown(
             colors = DropdownColors.dropdownTextFieldColors()
         )
 
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
+            onDismissRequest = {
+                onExpandedChange(false)
+                focusManager.clearFocus()
+                keyboard?.hide()
+            },
+            modifier = Modifier.exposedDropdownSize(matchTextFieldWidth = true),
+            properties = PopupProperties(focusable = true),
             shape = DropdownColors.DropdownMenuColors.menuShape(),
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
@@ -352,21 +355,22 @@ private fun CurrencyDropdown(
                     onValueChange = { query = it },
                     singleLine = true,
                     placeholder = { Text(stringResource(R.string.accounts_currency_search)) },
-                    modifier = Modifier.fillMaxWidth()
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    modifier = Modifier.fillMaxWidth().focusRequester(searchFR)
                 )
             }
             HorizontalDivider()
-
             filtered.take(50).forEach { code ->
                 val selectedItem = code == selected
                 val name = names[code] ?: code
-                val leftText = if (!name.equals(code, ignoreCase = true)) "$code — $name" else code
-
+                val label = if (!name.equals(code, ignoreCase = true)) "$code — $name" else code
                 DropdownMenuItem(
-                    text = { Text(leftText) },
+                    text = { Text(label) },
                     onClick = {
                         onSelect(code)
                         onExpandedChange(false)
+                        focusManager.clearFocus()
+                        keyboard?.hide()
                     },
                     leadingIcon = { if (selectedItem) Icon(Icons.Default.Check, null) },
                     colors = if (selectedItem)

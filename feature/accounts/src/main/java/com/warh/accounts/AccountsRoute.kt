@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,8 +31,6 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -54,7 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.warh.accounts.utils.BalanceUtils.formatMajor
+import com.warh.commons.NumberUtils
+import com.warh.commons.NumberUtils.formatHeroAmount
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
 import com.warh.commons.bottom_bar.LocalBottomBarBehavior
@@ -66,6 +67,8 @@ import com.warh.domain.models.AccountType
 import org.koin.androidx.compose.koinViewModel
 import com.warh.commons.R.drawable as CommonDrawables
 
+//TODO:accs - editar/eliminar al onhold
+
 @Composable
 fun AccountsRoute(
     vm: AccountsViewModel = koinViewModel(),
@@ -76,9 +79,12 @@ fun AccountsRoute(
     val ui by vm.ui.collectAsStateWithLifecycle()
 
     SideEffect {
-        setFab(FabSpec(visible = ui.accounts.isNotEmpty(), onClick = onNavigateToAdd) {
-            Icon(Icons.Default.Add, null)
-        })
+        setFab(
+            FabSpec(
+                visible = !ui.loading && ui.accounts.isNotEmpty(),
+                onClick = onNavigateToAdd
+            ) { Icon(Icons.Default.Add, null) }
+        )
     }
 
     AccountsScreen(
@@ -100,7 +106,9 @@ private fun AccountsScreen(
     val appBarState = rememberTopAppBarState()
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
 
-    val snackBar = remember { SnackbarHostState() }
+    val scrollMods = Modifier
+        .nestedScroll(topSb.nestedScrollConnection)
+        .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier)
 
     val iconIds = remember {
         listOf(
@@ -118,100 +126,110 @@ private fun AccountsScreen(
                 scrollBehavior = topSb
             )
         },
-        snackbarHost = { SnackbarHost(snackBar) }
     ) { inner ->
-        val showEmpty = ui.accounts.isEmpty()
-
-        if (showEmpty) {
-            AccountsEmptyState(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start  = inner.calculateStartPadding(layoutDir),
-                        top    = inner.calculateTopPadding(),
-                        end    = inner.calculateEndPadding(layoutDir),
-                        bottom = 0.dp
-                    ),
-                onPrimaryAction = onNavigateToAdd
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start  = inner.calculateStartPadding(layoutDir),
-                        top    = inner.calculateTopPadding(),
-                        end    = inner.calculateEndPadding(layoutDir),
-                        bottom = 0.dp,
-                    )
-                    .nestedScroll(topSb.nestedScrollConnection)
-                    .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item {
-                    AccountsRingByCurrency(
-                        accounts = ui.accounts,
-                        totals   = ui.totalsByCurrency
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start  = inner.calculateStartPadding(layoutDir),
+                    top    = inner.calculateTopPadding(),
+                    end    = inner.calculateEndPadding(layoutDir),
+                    bottom = 0.dp
+                )
+                .then(scrollMods)
+        ) {
+            when {
+                ui.loading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                !ui.loading && ui.accounts.isEmpty() -> {
+                    AccountsEmptyState(
+                        modifier = Modifier.fillMaxSize(),
+                        onPrimaryAction = onNavigateToAdd
                     )
                 }
-
-                items(ui.accounts, key = { it.id!! }) { acc ->
-                    val cs = MaterialTheme.colorScheme
-                    val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
-                    val tint = acc.iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
-                    val balanceText = formatMajor(acc.balance, acc.currency)
-                    val balanceColor = if (acc.balance > 0L) Color(0xFF2E7D32) else cs.error
-
-                    ElevatedCard(
-                        onClick = { acc.id?.let(onAccountClick) },
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = cs.secondaryContainer
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(
+                            bottom = inner.calculateBottomPadding() + 24.dp
+                        )
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(iconIds[idx]),
-                                contentDescription = null,
-                                tint = tint
+                        item {
+                            AccountsRingByCurrency(
+                                accounts = ui.accounts,
+                                totals   = ui.totalsByCurrency
+                            )
+                        }
+
+                        items(ui.accounts, key = { it.id!! }) { acc ->
+                            val cs = MaterialTheme.colorScheme
+                            val idx = (acc.iconIndex - 1).coerceIn(0, iconIds.lastIndex)
+                            val tint = acc.iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
+
+                            val balanceText = NumberUtils.formatAmountPlain(
+                                minor = acc.balance,
+                                code = acc.currency,
+                                trimZeroDecimals = true
                             )
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = acc.name,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = acc.type.localized(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = cs.onSecondaryContainer.copy(alpha = 0.8f)
-                                )
-                            }
+                            val balanceColor = if (acc.balance > 0L) Color(0xFF2E7D32) else cs.error
 
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = balanceText,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = balanceColor
-                                )
-                                Text(
-                                    text = acc.currency,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = cs.onSecondaryContainer.copy(alpha = 0.8f)
-                                )
+                            ElevatedCard(
+                                onClick = { acc.id?.let(onAccountClick) },
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = cs.secondaryContainer
+                                ),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(iconIds[idx]),
+                                        contentDescription = null,
+                                        tint = tint
+                                    )
+
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = acc.name,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            text = acc.type.localized(),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                                        )
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = balanceText,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = balanceColor
+                                        )
+                                        Text(
+                                            text = acc.currency,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -326,7 +344,10 @@ private fun AccountsRingByCurrency(
     }
 
     val formattedTotal = remember(totalForSelectedMinor, selectedCode) {
-        formatMajor(totalForSelectedMinor, selectedCode)
+        formatHeroAmount(
+            minor = totalForSelectedMinor,
+            currency = selectedCode
+        )
     }
 
     var selectedSlice by remember { mutableStateOf<Int?>(null) }

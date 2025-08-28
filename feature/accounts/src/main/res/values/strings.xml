@@ -4,9 +4,9 @@
     <string name="accounts_title">Accounts</string>
 
     <!-- Empty Account -->
-    <string name="accounts_empty_title">No hay cuentas aún</string>
-    <string name="accounts_empty_subtitle">Creá tu primera cuenta para ver el resumen y empezar a registrar movimientos.</string>
-    <string name="accounts_empty_cta">Crear primera cuenta</string>
+    <string name="accounts_empty_title">No accounts yet</string>
+    <string name="accounts_empty_subtitle">Create your first account to see the summary and start tracking transactions.</string>
+    <string name="accounts_empty_cta">Create your first account</string>
 
     <string name="accounts_totals_title">Balance</string>
 

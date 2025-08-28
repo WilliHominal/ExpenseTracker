@@ -58,6 +58,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Currency
 import java.util.Locale
 
+//TODO: categorias separadas segun tipo de tx
+
 @Composable
 fun AddEditTransactionRoute(
     vm: AddEditTransactionViewModel = koinViewModel(),

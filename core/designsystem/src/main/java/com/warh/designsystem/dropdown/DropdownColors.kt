@@ -32,7 +32,7 @@ object DropdownColors {
         cursorColor      = MaterialTheme.colorScheme.primary,
         errorCursorColor = MaterialTheme.colorScheme.error,
 
-        // Selección de texto
+        // Seleccion de texto
         selectionColors = TextSelectionColors(
             handleColor = MaterialTheme.colorScheme.primary,
             backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
@@ -88,14 +88,14 @@ object DropdownColors {
     )
 
     object DropdownMenuColors {
-        // Forma del menú: sin esquinas arriba para que no “asome” el borde del TextField
+        // Forma del menu
         @Composable
         fun menuShape(): Shape = RoundedCornerShape(
             topStart = 0.dp, topEnd = 0.dp,
             bottomStart = 12.dp, bottomEnd = 12.dp
         )
 
-        // Colores para ítems “normales”
+        // Colores para items no seleccionados
         @Composable
         fun itemColors(): MenuItemColors = MenuDefaults.itemColors(
             textColor = MaterialTheme.colorScheme.onSurface,
@@ -106,7 +106,7 @@ object DropdownColors {
             disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
         )
 
-        // Colores para ítems “seleccionados” (texto/íconos sobre secondaryContainer)
+        // Colores para items seleccionados
         @Composable
         fun selectedItemColors(): MenuItemColors = MenuDefaults.itemColors(
             textColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -117,7 +117,7 @@ object DropdownColors {
             disabledTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.38f)
         )
 
-        // Modifier para resaltar el ítem seleccionado con fondo
+        // Resaltar el item seleccionado con fondo
         @Composable
         fun Modifier.selectedItemBackground(): Modifier =
             this
