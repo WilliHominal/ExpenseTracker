@@ -76,15 +76,13 @@ import com.warh.designsystem.dropdown.DropdownColors
 import com.warh.designsystem.dropdown.DropdownColors.DropdownMenuColors.selectedItemBackground
 import com.warh.domain.models.AccountType
 import kotlinx.coroutines.launch
-import org.koin.androidx.compose.koinViewModel
 import java.util.Currency
 import java.util.Locale
 import com.warh.commons.R.drawable as CommonDrawables
 
-//TODO: overflow de Long, limite de chars en cuenta (30?)
 @Composable
 fun AccountAddRoute(
-    vm: AccountAddViewModel = koinViewModel(),
+    vm: AccountAddViewModel,
     setFab: (FabSpec?) -> Unit,
     onBack: () -> Unit
 ) {
@@ -140,6 +138,21 @@ private fun AddAccountScreen(
     val sb = pinnedScrollBehavior(scroll)
     val scrollState = rememberScrollState()
 
+    val initialMinor = remember(ui.balanceText, ui.currency) {
+        runCatching { parseMinor(ui.balanceText, ui.currency) }.getOrDefault(0L)
+    }
+
+    val previewTotalMinor = remember(
+        ui.isEditing, initialMinor, ui.originalInitialBalance, ui.originalBalance
+    ) {
+        if (ui.isEditing) {
+            val delta = initialMinor - (ui.originalInitialBalance ?: 0L)
+            (ui.originalBalance ?: 0L) + delta
+        } else {
+            initialMinor
+        }
+    }
+
     Scaffold(
         topBar = {
             TopBarDefault(
@@ -167,7 +180,7 @@ private fun AddAccountScreen(
                 name = ui.name.ifBlank { stringResource(R.string.account_add_new_placeholder) },
                 type = ui.type,
                 currency = ui.currency,
-                balanceText = ui.balanceText,
+                totalMinor = previewTotalMinor,
                 iconIndex = ui.iconIndex,
                 iconColorArgb = ui.iconColorArgb
             )
@@ -389,7 +402,7 @@ private fun HeroPreviewCard(
     name: String,
     type: AccountType,
     currency: String,
-    balanceText: String,
+    totalMinor: Long,
     iconIndex: Int,
     iconColorArgb: Long?
 ) {
@@ -405,9 +418,8 @@ private fun HeroPreviewCard(
     val idx = (iconIndex - 1).coerceIn(0, iconIds.lastIndex)
     val tint = iconColorArgb?.let { Color(it.toInt()) } ?: cs.onSurfaceVariant
 
-    val parsed = runCatching { parseMinor(balanceText, currency) }.getOrDefault(0L)
-    val formatted = formatHeroAmount(parsed, currency, Locale.getDefault())
-    val positive = parsed >= 0
+    val totalText   = formatHeroAmount(totalMinor, currency, Locale.getDefault())
+    val totalPositive = totalMinor >= 0
 
     ElevatedCard(
         shape = RoundedCornerShape(24.dp),
@@ -450,9 +462,9 @@ private fun HeroPreviewCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    formatted,
+                    totalText,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (positive) Color(0xFF2E7D32) else cs.error
+                    color = if (totalPositive) Color(0xFF2E7D32) else cs.error
                 )
                 Text(
                     currency,

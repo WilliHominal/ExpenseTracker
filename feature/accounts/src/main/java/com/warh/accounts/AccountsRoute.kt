@@ -1,6 +1,15 @@
 package com.warh.accounts
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +25,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -31,8 +45,10 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -41,10 +57,13 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -53,6 +72,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
 import com.warh.commons.NumberUtils.formatHeroAmount
@@ -67,14 +87,12 @@ import com.warh.domain.models.AccountType
 import org.koin.androidx.compose.koinViewModel
 import com.warh.commons.R.drawable as CommonDrawables
 
-//TODO:accs - editar/eliminar al onhold
-
 @Composable
 fun AccountsRoute(
     vm: AccountsViewModel = koinViewModel(),
     setFab: (FabSpec?) -> Unit,
     onAccountClick: (Long) -> Unit,
-    onNavigateToAdd: () -> Unit,
+    onNavigateToAdd: (Long?) -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
 
@@ -82,7 +100,7 @@ fun AccountsRoute(
         setFab(
             FabSpec(
                 visible = !ui.loading && ui.accounts.isNotEmpty(),
-                onClick = onNavigateToAdd
+                onClick = { onNavigateToAdd(null) }
             ) { Icon(Icons.Default.Add, null) }
         )
     }
@@ -91,6 +109,7 @@ fun AccountsRoute(
         ui = ui,
         onAccountClick = onAccountClick,
         onNavigateToAdd = onNavigateToAdd,
+        onDelete = vm::delete
     )
 }
 
@@ -99,18 +118,22 @@ fun AccountsRoute(
 private fun AccountsScreen(
     ui: AccountsUiState,
     onAccountClick: (Long) -> Unit,
-    onNavigateToAdd: () -> Unit,
+    onNavigateToAdd: (Long?) -> Unit,
+    onDelete: (Long) -> Unit,
 ) {
     val layoutDir = LocalLayoutDirection.current
     val bottomSb = LocalBottomBarBehavior.current
     val appBarState = rememberTopAppBarState()
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
 
+    var openMenuId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pendingDeleteId by rememberSaveable { mutableStateOf<Long?>(null) }
+
     val scrollMods = Modifier
         .nestedScroll(topSb.nestedScrollConnection)
         .then(bottomSb?.let { Modifier.nestedScroll(it.connection) } ?: Modifier)
 
-    val iconIds = remember {
+    val iconIds = rememberSaveable {
         listOf(
             CommonDrawables.account_icon_1, CommonDrawables.account_icon_2,
             CommonDrawables.account_icon_3, CommonDrawables.account_icon_4,
@@ -131,9 +154,9 @@ private fun AccountsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    start  = inner.calculateStartPadding(layoutDir),
-                    top    = inner.calculateTopPadding(),
-                    end    = inner.calculateEndPadding(layoutDir),
+                    start = inner.calculateStartPadding(layoutDir),
+                    top = inner.calculateTopPadding(),
+                    end = inner.calculateEndPadding(layoutDir),
                     bottom = 0.dp
                 )
                 .then(scrollMods)
@@ -147,16 +170,28 @@ private fun AccountsScreen(
                 !ui.loading && ui.accounts.isEmpty() -> {
                     AccountsEmptyState(
                         modifier = Modifier.fillMaxSize(),
-                        onPrimaryAction = onNavigateToAdd
+                        onPrimaryAction = { onNavigateToAdd(null) }
                     )
                 }
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(
-                            bottom = inner.calculateBottomPadding() + 24.dp
+                    if (openMenuId != null) {
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .zIndex(0f)
+                                .background(Color.Transparent)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { openMenuId = null }
                         )
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = inner.calculateBottomPadding() + 24.dp)
                     ) {
                         item {
                             AccountsRingByCurrency(
@@ -178,65 +213,204 @@ private fun AccountsScreen(
 
                             val balanceColor = if (acc.balance > 0L) Color(0xFF2E7D32) else cs.error
 
-                            ElevatedCard(
-                                onClick = { acc.id?.let(onAccountClick) },
-                                shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.elevatedCardColors(
-                                    containerColor = cs.secondaryContainer
-                                ),
-                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(iconIds[idx]),
-                                        contentDescription = null,
-                                        tint = tint
-                                    )
-
-                                    Column(
-                                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = acc.name,
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                        Text(
-                                            text = acc.type.localized(),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = cs.onSecondaryContainer.copy(alpha = 0.8f)
-                                        )
-                                    }
-
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = balanceText,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = balanceColor
-                                        )
-                                        Text(
-                                            text = acc.currency,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = cs.onSecondaryContainer.copy(alpha = 0.8f)
-                                        )
-                                    }
+                            AccountRowCard(
+                                name = acc.name,
+                                subtitle = acc.type.localized(),
+                                iconPainter = painterResource(iconIds[idx]),
+                                iconTint = tint,
+                                balanceText = balanceText,
+                                balanceColor = balanceColor,
+                                currency = acc.currency,
+                                isMenuOpen = openMenuId == acc.id,
+                                onLongPress = { openMenuId = acc.id },
+                                onCardTap = {
+                                    if (openMenuId == null) acc.id?.let(onAccountClick)
+                                    else openMenuId = null
+                                },
+                                onEdit = {
+                                    acc.id?.let(onNavigateToAdd)
+                                    openMenuId = null
+                                },
+                                onDeleteRequest = {
+                                    acc.id?.let { pendingDeleteId = it }
+                                    openMenuId = null
                                 }
-                            }
+                            )
                         }
                     }
                 }
             }
+
+            val toDelete = pendingDeleteId
+            if (toDelete != null) {
+                DeleteAccountDialog(
+                    onDismiss = { pendingDeleteId = null },
+                    onConfirm = {
+                        onDelete(toDelete)
+                        pendingDeleteId = null
+                    }
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun AccountRowCard(
+    name: String,
+    subtitle: String,
+    iconPainter: Painter,
+    iconTint: Color,
+    balanceText: String,
+    balanceColor: Color,
+    currency: String,
+    isMenuOpen: Boolean,
+    onLongPress: () -> Unit,
+    onCardTap: () -> Unit,
+    onEdit: () -> Unit,
+    onDeleteRequest: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(24.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+    ) {
+        ElevatedCard(
+            shape = shape,
+            colors = CardDefaults.elevatedCardColors(containerColor = cs.secondaryContainer),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onCardTap,
+                    onLongClick = onLongPress
+                )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                Icon(painter = iconPainter, contentDescription = null, tint = iconTint)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = balanceText, style = MaterialTheme.typography.titleMedium, color = balanceColor)
+                    Text(
+                        text = currency,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cs.onSecondaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp)
+                .zIndex(1f),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            AnimatedVisibility(
+                visible = isMenuOpen,
+                enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SmallRoundAction(
+                        icon = Icons.Default.Edit,
+                        tint = cs.onPrimaryContainer,
+                        container = cs.primaryContainer,
+                        onClick = onEdit
+                    )
+                    SmallRoundAction(
+                        icon = Icons.Default.Delete,
+                        tint = cs.onPrimaryContainer,
+                        container = cs.primaryContainer,
+                        onClick = onDeleteRequest
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmallRoundAction(
+    icon: ImageVector,
+    tint: Color,
+    container: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = container,
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp
+    ) {
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = tint)
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .background(cs.errorContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Delete, null, tint = cs.error)
+            }
+        },
+        title = { Text(stringResource(R.string.accounts_delete_account_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.accounts_delete_account_body),
+                    color = cs.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.accounts_delete_account_irreversible),
+                    color = cs.error
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = cs.error)
+            ) { Text(stringResource(R.string.accounts_delete_action_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.accounts_delete_action_cancel)) }
+        },
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(20.dp)
+    )
 }
 
 @Composable
@@ -246,7 +420,9 @@ private fun AccountsEmptyState(
 ) {
     val cs = MaterialTheme.colorScheme
     Column(
-        modifier = modifier.padding(horizontal = 24.dp).padding(top = 24.dp),
+        modifier = modifier
+            .padding(horizontal = 24.dp)
+            .padding(top = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ElevatedCard(
@@ -471,6 +647,7 @@ fun AccountsScreenPreview_List_Light() {
             ui = uiListState(),
             onAccountClick = {},
             onNavigateToAdd = {},
+            onDelete = {}
         )
     }
 }
@@ -483,6 +660,7 @@ fun AccountsScreenPreview_List_Dark() {
             ui = uiListState(),
             onAccountClick = {},
             onNavigateToAdd = {},
+            onDelete = {}
         )
     }
 }

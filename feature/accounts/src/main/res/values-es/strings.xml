@@ -34,6 +34,13 @@
     <string name="account_type_wallet">Billetera</string>
     <string name="account_type_other">Otro</string>
 
+    <!-- Account Delete -->
+    <string name="accounts_delete_account_title">¿Eliminar cuenta?</string>
+    <string name="accounts_delete_account_body">Esto eliminará la cuenta y todos sus movimientos.</string>
+    <string name="accounts_delete_account_irreversible">Esta acción no se puede deshacer.</string>
+    <string name="accounts_delete_action_confirm">Eliminar</string>
+    <string name="accounts_delete_action_cancel">Cancelar</string>
+
     <!-- Icons -->
     <string name="accounts_icon_label">Icono</string>
     <string name="accounts_color_label">Color</string>

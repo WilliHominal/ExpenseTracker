@@ -34,6 +34,13 @@
     <string name="account_type_wallet">Wallet</string>
     <string name="account_type_other">Other</string>
 
+    <!-- Account Delete -->
+    <string name="accounts_delete_account_title">Delete account?</string>
+    <string name="accounts_delete_account_body">This will remove the account and its balances from your device.</string>
+    <string name="accounts_delete_account_irreversible">This action cannot be undone.</string>
+    <string name="accounts_delete_action_confirm">Delete</string>
+    <string name="accounts_delete_action_cancel">Cancel</string>
+
     <!-- Icons -->
     <string name="accounts_icon_label">Icon</string>
     <string name="accounts_color_label">Color</string>

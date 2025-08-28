@@ -16,6 +16,8 @@ import com.warh.expensetracker.utils.composableAnimated
 import com.warh.expensetracker.utils.composableNoAnim
 import com.warh.transactions.AddEditTransactionRoute
 import com.warh.transactions.TransactionsRoute
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun MainNavHost(
@@ -50,16 +52,31 @@ fun MainNavHost(
                 onAccountClick = { accountId ->
                     navController.navigate("${Destinations.ACCOUNT_DETAIL}/$accountId")
                 },
-                onNavigateToAdd = {
-                    navController.navigate(Destinations.ACCOUNT_ADD)
+                onNavigateToAdd = { id: Long? ->
+                    if (id != null)
+                        navController.navigate("${Destinations.ACCOUNT_ADD}?id=$id")
+                    else
+                        navController.navigate(Destinations.ACCOUNT_ADD)
                 }
             )
         }
 
-        composableAnimated(Destinations.ACCOUNT_ADD) {
+        composableAnimated(
+            route = "${Destinations.ACCOUNT_ADD}?id={id}",
+            arguments = listOf(
+                navArgument("id") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { entry ->
+            val idArg = entry.arguments?.getLong("id") ?: -1L
+            val editingId: Long? = if (idArg > 0) idArg else null
+
             AccountAddRoute(
+                vm = koinViewModel(parameters = { parametersOf(editingId) }),
                 setFab = setFab,
-                onBack = { navController.navigateUp() }
+                onBack = { navController.navigateUp() },
             )
         }
 

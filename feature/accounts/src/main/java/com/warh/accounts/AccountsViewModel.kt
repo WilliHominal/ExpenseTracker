@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class CurrencyTotalUi(
     val currency: String,
@@ -48,4 +49,10 @@ class AccountsViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = AccountsUiState()
         )
+
+    fun delete(id: Long) {
+        viewModelScope.launch {
+            //TODO: deleteAccount(id)
+        }
+    }
 }

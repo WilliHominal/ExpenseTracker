@@ -8,6 +8,7 @@ import com.warh.commons.Strings
 import com.warh.commons.get
 import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
+import com.warh.domain.use_cases.GetAccountUseCase
 import com.warh.domain.use_cases.UpsertAccountUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,11 @@ data class AccountAddUiState(
     val iconIndex: Int = 1,
     val iconColorArgb: Long? = null,
     val isSaving: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isEditing: Boolean = false,
+    val editingId: Long? = null,
+    val originalInitialBalance: Long? = null,
+    val originalBalance: Long? = null
 )
 
 private fun defaultCurrency(): String =
@@ -33,12 +38,38 @@ private fun defaultCurrency(): String =
 private const val ACCOUNT_NAME_MAX_CHARS = 25
 
 class AccountAddViewModel(
+    private val editingId: Long?,
+    private val getAccount: GetAccountUseCase,
     private val upsert: UpsertAccountUseCase,
     private val strings: Strings
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(AccountAddUiState())
     val ui: StateFlow<AccountAddUiState> = _ui.asStateFlow()
+
+    init {
+        if (editingId != null) {
+            viewModelScope.launch {
+                getAccount(editingId)?.let { acc ->
+                    val digits = digitsFor(acc.currency)
+                    _ui.update {
+                        it.copy(
+                            isEditing = true,
+                            editingId = acc.id,
+                            name = acc.name,
+                            type = acc.type,
+                            currency = acc.currency,
+                            balanceText = formatForInput(acc.initialBalance, digits),
+                            iconIndex = acc.iconIndex,
+                            iconColorArgb = acc.iconColorArgb,
+                            originalInitialBalance = acc.initialBalance,
+                            originalBalance = acc.balance
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun onName(v: String) = _ui.update { it.copy(name = sanitizeAccountName(v)) }
     fun onType(v: AccountType) = _ui.update { it.copy(type = v) }
@@ -68,17 +99,39 @@ class AccountAddViewModel(
         viewModelScope.launch {
             _ui.update { it.copy(isSaving = true, error = null) }
             val result = runCatching {
-                val initial = parseMinor(d.balanceText, d.currency)
-                val account = Account(
-                    name = d.name.trim(),
-                    type = d.type,
-                    currency = d.currency,
-                    initialBalance = initial,
-                    balance = initial,
-                    iconIndex = d.iconIndex,
-                    iconColorArgb = d.iconColorArgb
-                )
-                upsert(account)
+                if (d.isEditing) {
+                    val newInitial   = parseMinor(d.balanceText, d.currency)
+                    val origInitial  = d.originalInitialBalance ?: 0L
+                    val origBalance  = d.originalBalance ?: 0L
+                    val delta        = newInitial - origInitial
+                    val newBalance   = origBalance + delta
+
+                    upsert(
+                        Account(
+                            id = d.editingId,
+                            name = d.name.trim(),
+                            type = d.type,
+                            currency = d.currency,
+                            initialBalance = newInitial,
+                            balance = newBalance,
+                            iconIndex = d.iconIndex,
+                            iconColorArgb = d.iconColorArgb
+                        )
+                    )
+                } else {
+                    val initial = parseMinor(d.balanceText, d.currency)
+                    upsert(
+                        Account(
+                            name = d.name.trim(),
+                            type = d.type,
+                            currency = d.currency,
+                            initialBalance = initial,
+                            balance = initial,
+                            iconIndex = d.iconIndex,
+                            iconColorArgb = d.iconColorArgb
+                        )
+                    )
+                }
             }
             _ui.update { it.copy(isSaving = false) }
             result.onSuccess { onDone() }
@@ -101,6 +154,15 @@ class AccountAddViewModel(
         var r = 1L
         repeat(n) { r *= 10L }
         return r
+    }
+
+    private fun formatForInput(minor: Long, digits: Int): String {
+        if (digits <= 0) return minor.toString()
+        val abs = kotlin.math.abs(minor)
+        val sign = if (minor < 0) "-" else ""
+        val intPart = abs / pow10(digits)
+        val fracPart = (abs % pow10(digits)).toString().padStart(digits, '0')
+        return "$sign$intPart.$fracPart"
     }
 
     private fun sanitizeBalanceInput(raw: String, digits: Int): String {
