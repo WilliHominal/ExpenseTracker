@@ -7,6 +7,7 @@ import com.warh.domain.use_cases.CanDeleteAccountUseCase
 import com.warh.domain.use_cases.DeleteAccountUseCase
 import com.warh.domain.use_cases.GetAccountUseCase
 import com.warh.domain.use_cases.UpsertAccountUseCase
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
@@ -14,8 +15,14 @@ import org.koin.dsl.module
 val accountsModule = module {
     viewModelOf(::AccountsViewModel)
     viewModelOf(::AccountDetailViewModel)
-    viewModelOf(::AccountAddViewModel)
-
+    viewModel { (editingId: Long?) ->
+        AccountAddViewModel(
+            upsert = get(),
+            getAccount = get(),
+            strings = get(),
+            editingId = editingId
+        )
+    }
     factoryOf(::GetAccountUseCase)
     factoryOf(::UpsertAccountUseCase)
     factoryOf(::DeleteAccountUseCase)

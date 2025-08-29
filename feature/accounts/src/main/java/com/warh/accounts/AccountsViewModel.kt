@@ -5,11 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.warh.domain.models.Account
 import com.warh.domain.use_cases.DeleteAccountUseCase
 import com.warh.domain.use_cases.ObserveAccountsUseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class CurrencyTotalUi(
     val currency: String,
@@ -24,11 +28,16 @@ data class AccountsUiState(
 
 class AccountsViewModel(
     observeAccounts: ObserveAccountsUseCase,
-    deleteAccount: DeleteAccountUseCase
+    private val deleteAccount: DeleteAccountUseCase
 ) : ViewModel() {
 
+    private val _loading = MutableStateFlow(false)
+
     val ui: StateFlow<AccountsUiState> =
-        observeAccounts().map { accounts ->
+        combine(
+            observeAccounts(),
+            _loading
+        ) { accounts, loading ->
             val sortedAccounts = accounts.sortedWith(
                 compareBy<Account> { it.currency }
                     .thenByDescending { it.balance }
@@ -42,7 +51,7 @@ class AccountsViewModel(
                 .sortedBy { it.currency }
 
             AccountsUiState(
-                loading = false,
+                loading = loading,
                 accounts = sortedAccounts,
                 totalsByCurrency = totals
             )
@@ -54,7 +63,9 @@ class AccountsViewModel(
 
     fun delete(id: Long) {
         viewModelScope.launch {
-            //TODO: deleteAccount(id)
+            _loading.value = true
+            withContext(Dispatchers.IO) { deleteAccount(id) }
+            _loading.value = false
         }
     }
 }
