@@ -36,7 +36,6 @@ class AccountRepositoryImpl(
 
         if (id == null) {
             val entity = AccountEntity(
-                id = null,
                 name = account.name,
                 type = typeString,
                 currency = account.currency,
@@ -51,7 +50,6 @@ class AccountRepositoryImpl(
         val current = dao.get(id)
         if (current == null) {
             val entity = AccountEntity(
-                id = null,
                 name = account.name,
                 type = typeString,
                 currency = account.currency,

@@ -61,6 +61,8 @@ import kotlinx.coroutines.flow.flowOf
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.util.Currency
+import java.util.Locale
 
 //TODO: empty screen
 //TODO: Transacciones sin TxType -> lo lleva la categoria
@@ -174,7 +176,9 @@ fun TransactionsScreen(
                     key = { idx -> pagingItems.peek(idx)?.id ?: idx }
                 ) { idx ->
                     pagingItems[idx]?.let { tx ->
-                        TransactionRow(tx)
+                        val currencyCode = accounts.find { it.id == tx.accountId }?.currency
+                            ?: Currency.getInstance(Locale.getDefault()).currencyCode
+                        TransactionRow(tx, currencyCode)
                     }
                 }
             }
@@ -244,9 +248,12 @@ private fun FilterBar(
 }
 
 @Composable
-private fun TransactionRow(tx: Transaction) {
-    val amountText = remember(tx.amountMinor, tx.currency) {
-        formatAmountWithCode(tx.amountMinor, tx.currency)
+private fun TransactionRow(
+    tx: Transaction,
+    currencyCode: String
+) {
+    val amountText = remember(tx.amountMinor, currencyCode) {
+        formatAmountWithCode(tx.amountMinor, currencyCode)
     }
     val dateText = remember(tx.date) {
         formatDateTime(tx.date)
@@ -279,13 +286,13 @@ fun TransactionsScreenPreviewDark() {
         val sampleTx = listOf(
             Transaction(
                 id = 1L, accountId = 1L, type = TxType.EXPENSE,
-                amountMinor = 123000, currency = "ARS",
-                date = LocalDateTime.now(), categoryId = 1L, merchant = "Café", note = null
+                amountMinor = 123000, date = LocalDateTime.now(),
+                categoryId = 1L, merchant = "Café", note = null
             ),
             Transaction(
                 id = 2L, accountId = 2L, type = TxType.EXPENSE,
-                amountMinor = 12500, currency = "ARS",
-                date = LocalDateTime.now(), categoryId = 2L, merchant = null, note = "si"
+                amountMinor = 12500, date = LocalDateTime.now(),
+                categoryId = 2L, merchant = null, note = "si"
             )
         )
 
@@ -325,13 +332,13 @@ fun TransactionsScreenPreviewLight() {
         val sampleTx = listOf(
             Transaction(
                 id = 1L, accountId = 1L, type = TxType.EXPENSE,
-                amountMinor = 123000, currency = "ARS",
-                date = LocalDateTime.now(), categoryId = 1L, merchant = "Café", note = null
+                amountMinor = 123000, date = LocalDateTime.now(),
+                categoryId = 1L, merchant = "Café", note = null
             ),
             Transaction(
                 id = 2L, accountId = 2L, type = TxType.EXPENSE,
-                amountMinor = 12500, currency = "ARS",
-                date = LocalDateTime.now(), categoryId = 2L, merchant = null, note = "si"
+                amountMinor = 12500, date = LocalDateTime.now(),
+                categoryId = 2L, merchant = null, note = "si"
             )
         )
 

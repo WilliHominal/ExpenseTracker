@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "d7b4acde224ec66cfac2489b8f74d1f4",
+    "version": 3,
+    "identityHash": "485254fba965132d2b262ab1a0b5679a",
     "entities": [
       {
         "tableName": "accounts",
@@ -106,7 +106,7 @@
       },
       {
         "tableName": "transactions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `accountId` INTEGER NOT NULL, `type` TEXT NOT NULL, `amountMinor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `date` TEXT NOT NULL, `yearMonth` TEXT NOT NULL, `categoryId` INTEGER, `merchant` TEXT, `note` TEXT, FOREIGN KEY(`accountId`) REFERENCES `accounts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `accountId` INTEGER NOT NULL, `type` TEXT NOT NULL, `amountMinor` INTEGER NOT NULL, `date` TEXT NOT NULL, `yearMonth` TEXT NOT NULL, `categoryId` INTEGER, `merchant` TEXT, `note` TEXT, FOREIGN KEY(`accountId`) REFERENCES `accounts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -130,12 +130,6 @@
             "fieldPath": "amountMinor",
             "columnName": "amountMinor",
             "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "currency",
-            "columnName": "currency",
-            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -277,7 +271,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd7b4acde224ec66cfac2489b8f74d1f4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '485254fba965132d2b262ab1a0b5679a')"
     ]
   }
 }

@@ -146,7 +146,6 @@ class AddEditTransactionViewModel(
                 accountId = s.accountId,
                 type = s.type,
                 amountMinor = amountMinor,
-                currency = accountCurrency,
                 date = s.date,
                 categoryId = s.categoryId,
                 merchant = s.merchant.ifBlank { null },

@@ -28,7 +28,7 @@ class TransactionsExportViewModel(
                     appendLine(
                         listOf(
                             t.id, df.format(t.date), t.type, t.accountId, t.categoryId ?: "",
-                            t.amountMinor, t.currency, esc(t.merchant), esc(t.note)
+                            t.amountMinor, esc(t.merchant), esc(t.note)
                         ).joinToString(",")
                     )
                 }

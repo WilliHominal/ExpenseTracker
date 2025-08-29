@@ -1,10 +1,13 @@
 package com.warh.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
+import androidx.room.DeleteColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.warh.data.R
 import com.warh.data.daos.AccountDao
@@ -12,15 +15,15 @@ import com.warh.data.daos.BudgetDao
 import com.warh.data.daos.CategoryDao
 import com.warh.data.daos.MerchantSuggestDao
 import com.warh.data.daos.TransactionDao
+import com.warh.data.db.migrations.MIGRATION_1_2
 import com.warh.data.entities.AccountEntity
 import com.warh.data.entities.BudgetEntity
 import com.warh.data.entities.CategoryEntity
 import com.warh.data.entities.TransactionEntity
 import com.warh.domain.models.Category
 import com.warh.domain.models.TxType
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
+@Suppress("ClassName")
 @Database(
     entities = [
         AccountEntity::class,
@@ -28,8 +31,11 @@ import java.time.format.DateTimeFormatter
         TransactionEntity::class,
         BudgetEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 2, to = 3, spec = AppDatabase.M2_3::class)
+    ]
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -38,17 +44,18 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun budgetDao(): BudgetDao
     abstract fun merchantSuggestDao(): MerchantSuggestDao
+
+
+    @DeleteColumn(tableName = "transactions", columnName = "currency")
+    class M2_3 : AutoMigrationSpec
 }
 
 fun buildDatabase(context: Context): AppDatabase =
     Room.databaseBuilder(context, AppDatabase::class.java, "expense.db")
+        .addMigrations(MIGRATION_1_2)
         .addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
-                //TODO - Sacar las accounts+txs luego
-                //db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (1,'Efectivo','CASH','ARS',12500,12500,1,null)")
-                //db.execSQL("INSERT INTO accounts(id,name,type,currency,balance,initialBalance,iconIndex,iconColorArgb) VALUES (2,'Banco','BANK','USD',10,10,2,null)")
-
                 val expenseSeeds = listOf(
                     Category(0, context.getString(R.string.cat_food),          iconIndex = 0,  iconColorArgb = 0xFFE57373, type = TxType.EXPENSE),
                     Category(0, context.getString(R.string.cat_transport),     iconIndex = 1,  iconColorArgb = 0xFF64B5F6, type = TxType.EXPENSE),
@@ -91,20 +98,6 @@ fun buildDatabase(context: Context): AppDatabase =
 
                 insertAll(expenseSeeds)
                 insertAll(incomeSeeds)
-
-                val now = LocalDateTime.now()
-                val nowStr = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                val ymStr = now.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-
-                /*db.execSQL(
-                    """
-                    INSERT INTO transactions(id,accountId,type,amountMinor,currency,date,yearMonth,categoryId,merchant,note) VALUES
-                    (1,1,'INCOME',25000,'ARS','$nowStr','$ymStr',15,'Sueldo','Sueldo del trabajo'),
-                    (2,1,'EXPENSE',12500,'ARS','$nowStr','$ymStr',1,'Café','Latte y medialuna'),
-                    (3,2,'INCOME',10000,'USD','$nowStr','$ymStr',17,'Transferencia','Recibo de dólares')
-                    """.trimIndent()
-                )*/
             }
         })
-        .addMigrations()
         .build()

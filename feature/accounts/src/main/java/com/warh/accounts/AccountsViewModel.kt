@@ -3,6 +3,7 @@ package com.warh.accounts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warh.domain.models.Account
+import com.warh.domain.use_cases.DeleteAccountUseCase
 import com.warh.domain.use_cases.ObserveAccountsUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,7 @@ data class AccountsUiState(
 
 class AccountsViewModel(
     observeAccounts: ObserveAccountsUseCase,
+    deleteAccount: DeleteAccountUseCase
 ) : ViewModel() {
 
     val ui: StateFlow<AccountsUiState> =

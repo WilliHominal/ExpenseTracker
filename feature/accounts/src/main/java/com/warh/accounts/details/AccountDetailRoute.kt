@@ -235,7 +235,7 @@ private fun AccountDetailScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            items(state.transactions) { tx -> TransactionRow(tx) }
+            items(state.transactions) { tx -> TransactionRow(tx, state.accountCurrencyCode) }
         }
     }
 }
@@ -326,9 +326,12 @@ private fun BarChart(state: AccountDetailUiState, height: Dp = 140.dp) {
 }
 
 @Composable
-private fun TransactionRow(tx: Transaction) {
-    val amountText = remember(tx.amountMinor, tx.currency) {
-        NumberUtils.formatAmountWithSymbol(tx.amountMinor, tx.currency, trimZeroDecimals = true)
+private fun TransactionRow(
+    tx: Transaction,
+    currencyCode: String
+) {
+    val amountText = remember(tx.amountMinor, currencyCode) {
+        NumberUtils.formatAmountWithSymbol(tx.amountMinor, currencyCode, trimZeroDecimals = true)
     }
 
     val dateFmt = remember(Locale.getDefault()) {

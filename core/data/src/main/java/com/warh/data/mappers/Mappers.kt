@@ -15,11 +15,11 @@ import java.time.format.DateTimeFormatter
 private val YM: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
 fun TransactionEntity.toDomain() = Transaction(
-    id, accountId, TxType.valueOf(type), amountMinor, currency, date, categoryId, merchant, note
+    id, accountId, TxType.valueOf(type), amountMinor, date, categoryId, merchant, note
 )
 
 fun Transaction.toEntity() = TransactionEntity(
-    id, accountId, type.name, amountMinor, currency, date, date.format(YM), categoryId, merchant, note
+    id, accountId, type.name, amountMinor, date, date.format(YM), categoryId, merchant, note
 )
 
 fun AccountEntity.toDomain() = Account(
@@ -34,7 +34,7 @@ fun AccountEntity.toDomain() = Account(
 )
 
 fun Account.toEntity() = AccountEntity(
-    id = id,
+    id = id ?: 0L,
     name = name,
     type = type.name,
     currency = currency,
