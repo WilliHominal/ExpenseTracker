@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -14,17 +15,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,11 +46,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -63,9 +74,8 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 import java.util.Currency
 import java.util.Locale
+import com.warh.commons.R.drawable as CommonDrawables
 
-//TODO: empty screen
-//TODO: Transacciones sin TxType -> lo lleva la categoria
 //TODO: Mostrar separador por día
 //TODO: Transacciones recurrentes o programadas, en cantidad o porcentaje (tipo plazo fijo)
 
@@ -83,10 +93,15 @@ fun TransactionsRoute(
     val filtersVisible by vm.filtersVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    val isLoading = pagingItems.loadState.refresh is LoadState.Loading
+    val hasItems  = pagingItems.itemCount > 0
+
     SideEffect {
-        setFab(FabSpec(visible = true, onClick = onAddClick) {
-            Icon(Icons.Default.Add, null)
-        })
+        setFab(
+            FabSpec(visible = !isLoading && hasItems, onClick = onAddClick) {
+                Icon(Icons.Default.Add, null)
+            }
+        )
     }
 
     TransactionsScreen(
@@ -100,7 +115,8 @@ fun TransactionsRoute(
         onDateRangeChange = vm::setDateRange,
         onToggleAccount = vm::toggleAccount,
         onToggleCategory = vm::toggleCategory,
-        onExportClick = { vmExport.exportCsv(context, filter) }
+        onExportClick = { vmExport.exportCsv(context, filter) },
+        onAddClick = onAddClick
     )
 }
 
@@ -117,10 +133,14 @@ fun TransactionsScreen(
     onDateRangeChange: (LocalDateTime?, LocalDateTime?) -> Unit,
     onToggleAccount: (Long) -> Unit,
     onToggleCategory: (Long) -> Unit,
-    onExportClick: () -> Unit
+    onExportClick: () -> Unit,
+    onAddClick: () -> Unit,
 ) {
     val appBarState = rememberTopAppBarState()
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
+
+    val isLoading = pagingItems.loadState.refresh is LoadState.Loading
+    val isEmpty   = !isLoading && pagingItems.itemCount == 0
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -166,22 +186,104 @@ fun TransactionsScreen(
                 )
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(topSb.nestedScrollConnection)
-            ) {
-                items(
-                    count = pagingItems.itemCount,
-                    key = { idx -> pagingItems.peek(idx)?.id ?: idx }
-                ) { idx ->
-                    pagingItems[idx]?.let { tx ->
-                        val currencyCode = accounts.find { it.id == tx.accountId }?.currency
-                            ?: Currency.getInstance(Locale.getDefault()).currencyCode
-                        TransactionRow(tx, currencyCode)
+            when {
+                isLoading -> {
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .nestedScroll(topSb.nestedScrollConnection),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                isEmpty -> {
+                    TransactionsEmptyState(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(topSb.nestedScrollConnection),
+                        onPrimaryAction = onAddClick
+                    )
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(topSb.nestedScrollConnection)
+                    ) {
+                        items(
+                            count = pagingItems.itemCount,
+                            key = { idx -> pagingItems.peek(idx)?.id ?: idx }
+                        ) { idx ->
+                            pagingItems[idx]?.let { tx ->
+                                val currencyCode = accounts.find { it.id == tx.accountId }?.currency
+                                    ?: Currency.getInstance(Locale.getDefault()).currencyCode
+                                TransactionRow(tx, currencyCode)
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TransactionsEmptyState(
+    modifier: Modifier = Modifier,
+    onPrimaryAction: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .padding(horizontal = 24.dp)
+            .padding(top = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ElevatedCard(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = cs.surfaceContainerLowest
+            ),
+            elevation = CardDefaults.elevatedCardElevation(2.dp)
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(220.dp)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(CommonDrawables.transactions_empty_img),
+                    contentDescription = null,
+                    modifier = Modifier.size(132.dp),
+                    contentScale = ContentScale.FillBounds
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = stringResource(R.string.transactions_empty_title),
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.transactions_empty_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = cs.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Button(onClick = onPrimaryAction) {
+            Text(stringResource(R.string.transactions_empty_cta))
         }
     }
 }
@@ -311,7 +413,8 @@ fun TransactionsScreenPreviewDark() {
             onDateRangeChange = { _, _ -> },
             onToggleAccount = {},
             onToggleCategory = {},
-            onExportClick = {}
+            onExportClick = {},
+            onAddClick = {}
         )
     }
 }
@@ -357,7 +460,8 @@ fun TransactionsScreenPreviewLight() {
             onDateRangeChange = { _, _ -> },
             onToggleAccount = {},
             onToggleCategory = {},
-            onExportClick = {}
+            onExportClick = {},
+            onAddClick = {}
         )
     }
 }

@@ -4,6 +4,10 @@
     <string name="csv_name">transactions</string>
     <string name="export_csv_title">Export CSV</string>
 
+    <string name="transactions_empty_title">No transactions yet</string>
+    <string name="transactions_empty_subtitle">Track your spending and income here. Add your first transaction to get started.</string>
+    <string name="transactions_empty_cta">Add transaction</string>
+
     <string name="transactions_title">Transactions</string>
     <string name="transactions_export_cd">Export</string>
     <string name="transactions_filter_cd">Filter</string>
