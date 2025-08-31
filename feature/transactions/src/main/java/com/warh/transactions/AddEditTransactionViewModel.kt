@@ -60,6 +60,7 @@ class AddEditTransactionViewModel(
     val ui: StateFlow<TxEditorUiState> = _ui
 
     private val merchantQuery = MutableStateFlow("")
+    private var allCategories: List<Category> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -75,7 +76,12 @@ class AddEditTransactionViewModel(
 
         viewModelScope.launch {
             val categories = runCatching { io { getCategories() } }.getOrDefault(emptyList())
-            _ui.update { it.copy(categories = categories) }
+            allCategories = categories
+            _ui.update { st ->
+                val filtered = allCategories.filter { it.type == st.type }
+                val newCatId = filtered.firstOrNull { it.id == st.categoryId }?.id
+                st.copy(categories = filtered, categoryId = newCatId)
+            }
         }
 
         viewModelScope.launch {
@@ -106,7 +112,15 @@ class AddEditTransactionViewModel(
 
         st.copy(amountText = normalizeAmountInput(v, decimals))
     }
-    fun onTypeChange(v: TxType) = _ui.update { it.copy(type = v) }
+    fun onTypeChange(v: TxType) = _ui.update { st ->
+        val filtered = allCategories.filter { it.type == v }
+        val keepSelected = filtered.any { it.id == st.categoryId }
+        st.copy(
+            type = v,
+            categories = filtered,
+            categoryId = if (keepSelected) st.categoryId else null
+        )
+    }
     fun onAccountChange(id: Long) = _ui.update { it.copy(accountId = id) }
     fun onCategoryChange(id: Long?) = _ui.update { it.copy(categoryId = id) }
     fun onNoteChange(v: String) = _ui.update { it.copy(note = v) }
