@@ -3,4 +3,6 @@
     <string name="color_picker_title">Elegir color</string>
     <string name="color_picker_ok">OK</string>
     <string name="color_picker_cancel">Cancelar</string>
+
+    <string name="dropdown_select">Seleccionar</string>
 </resources>

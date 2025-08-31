@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warh.commons.NumberUtils
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
+import com.warh.commons.dropdown.AppDropdown
 import com.warh.designsystem.ExpenseTheme
 import com.warh.domain.models.Account
 import com.warh.domain.models.AccountType
@@ -189,18 +190,19 @@ fun AddEditTransactionScreen(
                 Text(stringResource(R.string.add_transaction_date_button, dateText))
             }
 
-            ExposedDropdown(
+            AppDropdown(
                 label = stringResource(R.string.add_transaction_account_label),
-                items = ui.accounts.map { it.id to it.name },
                 selectedId = ui.accountId,
-                onSelected = onAccountChange
+                items = ui.accounts.map { it.id to it.name },
+                onSelect = { it?.let(onAccountChange) }
             )
 
-            ExposedDropdown(
+            AppDropdown(
                 label = stringResource(R.string.add_transaction_category_label),
-                items = ui.categories.map { it.id to it.name },
                 selectedId = ui.categoryId,
-                onSelected = onCategoryChange
+                items = ui.categories.map { it.id to it.name },
+                onSelect = onCategoryChange,
+                nullLabel = stringResource(R.string.add_transaction_category_none)
             )
 
             MerchantAutocompleteField(
@@ -244,37 +246,6 @@ fun AddEditTransactionScreen(
                     }
                 }
             ) { DatePicker(state = state) }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExposedDropdown(
-    label: String,
-    items: List<Pair<Long?, String>>,
-    selectedId: Long?,
-    onSelected: (Long) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedText = items.firstOrNull { it.first == selectedId }?.second ?: stringResource(R.string.add_transaction_select)
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-        OutlinedTextField(
-            value = selectedText,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                .fillMaxWidth()
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            items.forEach { (id, name) ->
-                DropdownMenuItem(text = { Text(name) }, onClick = {
-                    id?.let { onSelected(id) }
-                    expanded = false
-                })
-            }
         }
     }
 }

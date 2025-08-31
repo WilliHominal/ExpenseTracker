@@ -70,6 +70,7 @@ import com.warh.commons.NumberUtils.formatHeroAmount
 import com.warh.commons.TopBarDefault
 import com.warh.commons.bottom_bar.FabSpec
 import com.warh.commons.color_picker.ColorChooser
+import com.warh.commons.dropdown.AppDropdown
 import com.warh.commons.icons.IconGrid
 import com.warh.designsystem.ExpenseTheme
 import com.warh.designsystem.dropdown.DropdownColors
@@ -199,51 +200,14 @@ private fun AddAccountScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                var typeExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = ui.type.localized(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.accounts_type_label)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-                            .fillMaxWidth(),
-                        colors = DropdownColors.dropdownTextFieldColors()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false },
-                        shape = DropdownColors.DropdownMenuColors.menuShape(),
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 0.dp,
-                        shadowElevation = 8.dp
-                    ) {
-                        AccountType.entries.forEach { t ->
-                            val selected = t == ui.type
-                            DropdownMenuItem(
-                                text = { Text(t.localized()) },
-                                onClick = {
-                                    onType(t)
-                                    typeExpanded = false
-                                },
-                                colors = if (selected)
-                                    DropdownColors.DropdownMenuColors.selectedItemColors()
-                                else
-                                    DropdownColors.DropdownMenuColors.itemColors(),
-                                modifier = if (selected)
-                                    Modifier.selectedItemBackground()
-                                else
-                                    Modifier
-                            )
-                        }
+                AppDropdown(
+                    label = stringResource(R.string.accounts_type_label),
+                    selectedId = ui.type.ordinal.toLong(),
+                    items = AccountType.entries.map { it.ordinal.toLong() to it.localized() },
+                    onSelect = { id ->
+                        id?.toInt()?.let { idx -> onType(AccountType.entries[idx]) }
                     }
-                }
+                )
 
                 var curExpanded by remember { mutableStateOf(false) }
                 CurrencyDropdown(

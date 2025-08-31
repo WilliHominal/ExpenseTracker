@@ -26,6 +26,7 @@
     <string name="add_transaction_date_button">Fecha: %1$s</string>
     <string name="add_transaction_account_label">Cuenta</string>
     <string name="add_transaction_category_label">Categoría (opcional)</string>
+    <string name="add_transaction_category_none">Sin categoría</string>
     <string name="add_transaction_merchant_label">Comercio</string>
     <string name="add_transaction_note_label">Nota</string>
     <string name="add_transaction_select">Seleccionar</string>
