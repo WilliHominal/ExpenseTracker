@@ -13,6 +13,9 @@ import java.time.LocalDateTime
 
 @Dao
 interface TransactionDao {
+    @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
+    suspend fun get(id: Long): TransactionEntity?
+
     @Query(
         """
             SELECT * FROM transactions

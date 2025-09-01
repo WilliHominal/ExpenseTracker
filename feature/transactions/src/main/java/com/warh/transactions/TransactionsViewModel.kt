@@ -8,6 +8,7 @@ import com.warh.domain.models.Account
 import com.warh.domain.models.Category
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TransactionFilter
+import com.warh.domain.use_cases.DeleteTransactionUseCase
 import com.warh.domain.use_cases.ObserveAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetTransactionsPagerUseCase
@@ -28,6 +29,7 @@ class TransactionsViewModel(
     private val pagerUseCase: GetTransactionsPagerUseCase,
     private val observeAccounts: ObserveAccountsUseCase,
     private val getCategories: GetCategoriesUseCase,
+    private val deleteTransaction: DeleteTransactionUseCase
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(TransactionFilter())
@@ -41,6 +43,12 @@ class TransactionsViewModel(
 
     private val _filtersVisible = MutableStateFlow(false)
     val filtersVisible: StateFlow<Boolean> = _filtersVisible
+
+    private val _openMenuId = MutableStateFlow<Long?>(null)
+    val openMenuId: StateFlow<Long?> = _openMenuId
+
+    private val _pendingDeleteId = MutableStateFlow<Long?>(null)
+    val pendingDeleteId: StateFlow<Long?> = _pendingDeleteId
 
     init {
         viewModelScope.launch {
@@ -77,6 +85,23 @@ class TransactionsViewModel(
     }
 
     fun toggleFiltersVisible() { _filtersVisible.update { !it } }
+
+    fun openMenu(id: Long) { _openMenuId.value = id }
+    fun closeMenu()       { _openMenuId.value = null }
+
+    fun requestDelete(id: Long) { _pendingDeleteId.value = id }
+    fun cancelDelete()          { _pendingDeleteId.value = null }
+
+    fun confirmDelete() {
+        val id = _pendingDeleteId.value ?: return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { deleteTransaction(id) }
+            } finally {
+                _pendingDeleteId.value = null
+            }
+        }
+    }
 
     private fun TransactionFilter.normalize(): TransactionFilter =
         copy(text = text?.trim()?.lowercase()?.takeIf { it.isNotEmpty() })

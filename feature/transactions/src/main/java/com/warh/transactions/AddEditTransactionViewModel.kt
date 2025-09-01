@@ -8,10 +8,11 @@ import com.warh.domain.models.Account
 import com.warh.domain.models.Category
 import com.warh.domain.models.Transaction
 import com.warh.domain.models.TxType
-import com.warh.domain.use_cases.AddTransactionUseCase
-import com.warh.domain.use_cases.ObserveAccountsUseCase
 import com.warh.domain.use_cases.GetCategoriesUseCase
 import com.warh.domain.use_cases.GetMerchantSuggestionsUseCase
+import com.warh.domain.use_cases.GetTransactionUseCase
+import com.warh.domain.use_cases.ObserveAccountsUseCase
+import com.warh.domain.use_cases.UpsertTransactionUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -45,11 +46,15 @@ data class TxEditorUiState(
     val accounts: List<Account> = emptyList(),
     val categories: List<Category> = emptyList(),
     val merchantSuggestions: List<String> = emptyList(),
+    val isEditing: Boolean = false,
+    val editingId: Long? = null,
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class AddEditTransactionViewModel(
-    private val addTx: AddTransactionUseCase,
+    private val editingId: Long?,
+    private val getTransaction: GetTransactionUseCase,
+    private val upsertTx: UpsertTransactionUseCase,
     private val observeAccounts: ObserveAccountsUseCase,
     private val getCategories: GetCategoriesUseCase,
     private val getMerchantSuggestions: GetMerchantSuggestionsUseCase,
@@ -62,6 +67,9 @@ class AddEditTransactionViewModel(
     private val merchantQuery = MutableStateFlow("")
     private var allCategories: List<Category> = emptyList()
 
+    private var editingAmountMinor: Long? = null
+    private var appliedEditingPrefill = false
+
     init {
         viewModelScope.launch {
             observeAccounts().collect { accounts ->
@@ -70,6 +78,12 @@ class AddEditTransactionViewModel(
                         st.accountId?.takeIf { sel -> accounts.any { it.id == sel } }
                             ?: accounts.firstOrNull()?.id
                     st.copy(accounts = accounts, accountId = newSelected)
+                }
+
+                if (!appliedEditingPrefill && _ui.value.isEditing && editingAmountMinor != null) {
+                    val digits = digitsForSelectedAccount()
+                    _ui.update { it.copy(amountText = formatForInput(editingAmountMinor!!, digits)) }
+                    appliedEditingPrefill = true
                 }
             }
         }
@@ -94,22 +108,42 @@ class AddEditTransactionViewModel(
                         val items = runCatching { io { getMerchantSuggestions(s) } }
                             .getOrElse { emptyList() }
                         emit(items)
-                    } else {
-                        flowOf(emptyList())
-                    }
+                    } else flowOf(emptyList())
                 }
-                .collect { items ->
-                    _ui.update { it.copy(merchantSuggestions = items) }
+                .collect { items -> _ui.update { it.copy(merchantSuggestions = items) } }
+        }
+
+        if (editingId != null) {
+            viewModelScope.launch {
+                val tx = runCatching { io { getTransaction(editingId) } }.getOrNull() ?: return@launch
+                editingAmountMinor = tx.amountMinor
+                val digits = digitsForSelectedAccount(accountId = tx.accountId)
+
+                _ui.update {
+                    it.copy(
+                        isEditing  = true,
+                        editingId  = tx.id,
+                        amountText = formatForInput(tx.amountMinor, digits),
+                        type       = tx.type,
+                        accountId  = tx.accountId,
+                        categoryId = tx.categoryId,
+                        merchant   = tx.merchant.orEmpty(),
+                        note       = tx.note.orEmpty(),
+                        date       = tx.date
+                    )
                 }
+
+                _ui.update { st ->
+                    val filtered = allCategories.filter { it.type == st.type }
+                    st.copy(categories = filtered)
+                }
+                appliedEditingPrefill = true
+            }
         }
     }
 
     fun onAmountChange(v: String) = _ui.update { st ->
-        val code = st.accounts.firstOrNull { it.id == st.accountId }?.currency
-            ?: Currency.getInstance(Locale.getDefault()).currencyCode
-        val decimals = runCatching { Currency.getInstance(code).defaultFractionDigits }
-            .getOrDefault(2).coerceAtLeast(0)
-
+        val decimals = digitsForSelectedAccount()
         st.copy(amountText = normalizeAmountInput(v, decimals))
     }
     fun onTypeChange(v: TxType) = _ui.update { st ->
@@ -130,7 +164,6 @@ class AddEditTransactionViewModel(
         _ui.update { it.copy(merchant = v) }
         merchantQuery.value = v
     }
-
     fun onMerchantPick(s: String) {
         _ui.update { it.copy(merchant = s, merchantSuggestions = emptyList()) }
         merchantQuery.value = s
@@ -138,47 +171,57 @@ class AddEditTransactionViewModel(
 
     fun save(onSaved: () -> Unit) {
         val s = ui.value
-
         viewModelScope.launch {
             _ui.update { it.copy(isSaving = true, error = null) }
 
-            val accountCurrency = ui.value.accounts
-                .firstOrNull { it.id == s.accountId }
-                ?.currency ?: Currency.getInstance(Locale.getDefault()).currencyCode
-
-            val decimals = runCatching { Currency.getInstance(accountCurrency).defaultFractionDigits }
-                .getOrDefault(2).coerceAtLeast(0)
-
+            val decimals = digitsForSelectedAccount()
             val amountMinor = parseAmountMinor(s.amountText, decimals)
+
             if (amountMinor <= 0 || s.accountId == null) {
                 _ui.update { it.copy(error = strings[R.string.add_transaction_error_account_or_amount_invalid]) }
+                _ui.update { it.copy(isSaving = false) }
                 return@launch
             }
 
             val tx = Transaction(
-                id = System.currentTimeMillis(),
-                accountId = s.accountId,
-                type = s.type,
+                id          = s.editingId ?: System.currentTimeMillis(),
+                accountId   = s.accountId,
+                type        = s.type,
                 amountMinor = amountMinor,
-                date = s.date,
-                categoryId = s.categoryId,
-                merchant = s.merchant.ifBlank { null },
-                note = s.note.ifBlank { null },
+                date        = s.date,
+                categoryId  = s.categoryId,
+                merchant    = s.merchant.ifBlank { null },
+                note        = s.note.ifBlank { null },
             )
 
-            val result = runCatching { io { addTx(tx) } }
+            val result = runCatching { io { upsertTx(tx) } }
             _ui.update { it.copy(isSaving = false) }
 
             result.onSuccess { onSaved() }
                 .onFailure { e ->
-                    _ui.update {
-                        it.copy(error = e.message ?: strings[R.string.add_transaction_error_default])
-                    }
+                    _ui.update { it.copy(error = e.message ?: strings[R.string.add_transaction_error_default]) }
                 }
         }
     }
 
     // --- Helpers ---
+    private fun digitsForSelectedAccount(accountId: Long? = _ui.value.accountId): Int {
+        val code = _ui.value.accounts.firstOrNull { it.id == accountId }?.currency
+            ?: Currency.getInstance(Locale.getDefault()).currencyCode
+        return runCatching { Currency.getInstance(code).defaultFractionDigits }
+            .getOrDefault(2).coerceAtLeast(0)
+    }
+
+    private fun formatForInput(minor: Long, digits: Int): String {
+        if (digits <= 0) return minor.toString()
+        val abs = kotlin.math.abs(minor)
+        val sign = if (minor < 0) "-" else ""
+        val pow = 10.0.pow(digits).toLong().coerceAtLeast(1L)
+        val intPart = abs / pow
+        val fracPart = (abs % pow).toString().padStart(digits, '0')
+        return "$sign$intPart.$fracPart"
+    }
+
     private fun normalizeAmountInput(raw: String, decimals: Int): String {
         val filtered = raw.filter { it.isDigit() || it == '.' || it == ',' }
         var s = filtered.replace(',', '.')

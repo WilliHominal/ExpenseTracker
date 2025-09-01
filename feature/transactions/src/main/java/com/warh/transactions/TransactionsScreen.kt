@@ -4,10 +4,20 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,12 +27,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -35,6 +50,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,6 +61,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -52,6 +70,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
@@ -77,20 +96,23 @@ import java.util.Locale
 import com.warh.commons.R.drawable as CommonDrawables
 
 //TODO: Mostrar separador por día
+//TODO: Add/Edit
 //TODO: Transacciones recurrentes o programadas, en cantidad o porcentaje (tipo plazo fijo)
 
 @Composable
 fun TransactionsRoute(
-    onAddClick: () -> Unit,
     vm: TransactionsViewModel = koinViewModel(),
     vmExport: TransactionsExportViewModel = koinViewModel(),
-    setFab: (FabSpec?) -> Unit
+    setFab: (FabSpec?) -> Unit,
+    onNavigateToAdd: (Long?) -> Unit,
 ) {
     val pagingItems = vm.paging.collectAsLazyPagingItems()
     val filter by vm.filter.collectAsStateWithLifecycle()
     val accounts by vm.accounts.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
     val filtersVisible by vm.filtersVisible.collectAsStateWithLifecycle()
+    val openMenuId by vm.openMenuId.collectAsStateWithLifecycle()
+    val pendingDeleteId by vm.pendingDeleteId.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val isLoading = pagingItems.loadState.refresh is LoadState.Loading
@@ -98,7 +120,7 @@ fun TransactionsRoute(
 
     SideEffect {
         setFab(
-            FabSpec(visible = !isLoading && hasItems, onClick = onAddClick) {
+            FabSpec(visible = !isLoading && hasItems, onClick = { onNavigateToAdd(null) }) {
                 Icon(Icons.Default.Add, null)
             }
         )
@@ -116,7 +138,14 @@ fun TransactionsRoute(
         onToggleAccount = vm::toggleAccount,
         onToggleCategory = vm::toggleCategory,
         onExportClick = { vmExport.exportCsv(context, filter) },
-        onAddClick = onAddClick
+        onNavigateToAdd = onNavigateToAdd,
+        openMenuId = openMenuId,
+        pendingDeleteId = pendingDeleteId,
+        onOpenMenu = vm::openMenu,
+        onCloseMenu = vm::closeMenu,
+        onRequestDelete = vm::requestDelete,
+        onCancelDelete = vm::cancelDelete,
+        onConfirmDelete = vm::confirmDelete
     )
 }
 
@@ -134,7 +163,14 @@ fun TransactionsScreen(
     onToggleAccount: (Long) -> Unit,
     onToggleCategory: (Long) -> Unit,
     onExportClick: () -> Unit,
-    onAddClick: () -> Unit,
+    onNavigateToAdd: (Long?) -> Unit,
+    openMenuId: Long?,
+    pendingDeleteId: Long?,
+    onOpenMenu: (Long) -> Unit,
+    onCloseMenu: () -> Unit,
+    onRequestDelete: (Long) -> Unit,
+    onCancelDelete: () -> Unit,
+    onConfirmDelete: () -> Unit,
 ) {
     val appBarState = rememberTopAppBarState()
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
@@ -204,31 +240,239 @@ fun TransactionsScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(topSb.nestedScrollConnection),
-                        onPrimaryAction = onAddClick
+                        onPrimaryAction = { onNavigateToAdd(null) }
                     )
                 }
 
                 else -> {
-                    LazyColumn(
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(topSb.nestedScrollConnection)
                     ) {
-                        items(
-                            count = pagingItems.itemCount,
-                            key = { idx -> pagingItems.peek(idx)?.id ?: idx }
-                        ) { idx ->
-                            pagingItems[idx]?.let { tx ->
-                                val currencyCode = accounts.find { it.id == tx.accountId }?.currency
-                                    ?: Currency.getInstance(Locale.getDefault()).currencyCode
-                                TransactionRow(tx, currencyCode)
+                        // Overlay para cerrar el menú si hay uno abierto
+                        if (openMenuId != null) {
+                            Box(
+                                Modifier
+                                    .matchParentSize()
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) { onCloseMenu() }
+                            )
+                        }
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 24.dp)
+                        ) {
+                            items(
+                                count = pagingItems.itemCount,
+                                key = { idx -> pagingItems.peek(idx)?.id ?: idx }
+                            ) { idx ->
+                                pagingItems[idx]?.let { tx ->
+                                    val currencyCode = accounts.find { it.id == tx.accountId }?.currency
+                                        ?: Currency.getInstance(Locale.getDefault()).currencyCode
+
+                                    TransactionRowCard(
+                                        tx = tx,
+                                        currencyCode = currencyCode,
+                                        isMenuOpen = openMenuId == tx.id,
+                                        onLongPress = { tx.id?.let(onOpenMenu) },
+                                        onCardTap = {
+                                            if (openMenuId == null) {
+                                                // navegar a editar con el id
+                                                tx.id?.let(onNavigateToAdd)
+                                            } else onCloseMenu()
+                                        },
+                                        onEdit = {
+                                            tx.id?.let(onNavigateToAdd)
+                                            onCloseMenu()
+                                        },
+                                        onDeleteRequest = {
+                                            tx.id?.let(onRequestDelete)
+                                            onCloseMenu()
+                                        }
+                                    )
+                                }
                             }
+                        }
+
+                        // Diálogo de confirmación de borrado
+                        if (pendingDeleteId != null) {
+                            DeleteTransactionDialog(
+                                onDismiss = onCancelDelete,
+                                onConfirm = onConfirmDelete
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun TransactionRowCard(
+    tx: Transaction,
+    currencyCode: String,
+    isMenuOpen: Boolean,
+    onLongPress: () -> Unit,
+    onCardTap: () -> Unit,
+    onEdit: () -> Unit,
+    onDeleteRequest: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(24.dp)
+
+    val amountText = remember(tx.amountMinor, currencyCode) {
+        formatAmountWithCode(tx.amountMinor, currencyCode)
+    }
+    val dateText = remember(tx.date) { formatDateTime(tx.date) }
+
+    val amountColor = when (tx.type) {
+        TxType.INCOME  -> Color(0xFF2E7D32)
+        TxType.EXPENSE -> cs.error
+        else           -> cs.onSurface
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+    ) {
+        ElevatedCard(
+            shape = shape,
+            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onCardTap,
+                    onLongClick = onLongPress
+                )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        tx.merchant ?: tx.note ?: stringResource(R.string.transactions_transaction_default_name),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        dateText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = cs.onSurfaceVariant
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(amountText, style = MaterialTheme.typography.titleMedium, color = amountColor)
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp)
+                .zIndex(1f),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isMenuOpen,
+                enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SmallRoundAction(
+                        icon = Icons.Default.Edit,
+                        tint = cs.onPrimaryContainer,
+                        container = cs.primaryContainer,
+                        onClick = onEdit
+                    )
+                    SmallRoundAction(
+                        icon = Icons.Default.Delete,
+                        tint = cs.onPrimaryContainer,
+                        container = cs.primaryContainer,
+                        onClick = onDeleteRequest
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmallRoundAction(
+    icon: ImageVector,
+    tint: Color,
+    container: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = container,
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp
+    ) {
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = tint)
+        }
+    }
+}
+
+@Composable
+private fun DeleteTransactionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .background(cs.errorContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Delete, null, tint = cs.error)
+            }
+        },
+        title = { Text(stringResource(R.string.transactions_delete_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.transactions_delete_body),
+                    color = cs.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.transactions_delete_irreversible),
+                    color = cs.error
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = cs.error)
+            ) { Text(stringResource(R.string.transactions_delete_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.transactions_delete_cancel)) }
+        },
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(20.dp)
+    )
 }
 
 @Composable
@@ -250,7 +494,7 @@ private fun TransactionsEmptyState(
             ),
             elevation = CardDefaults.elevatedCardElevation(2.dp)
         ) {
-            androidx.compose.foundation.layout.Box(
+            Box(
                 modifier = Modifier
                     .size(220.dp)
                     .padding(24.dp),
@@ -414,7 +658,14 @@ fun TransactionsScreenPreviewDark() {
             onToggleAccount = {},
             onToggleCategory = {},
             onExportClick = {},
-            onAddClick = {}
+            onNavigateToAdd = {},
+            openMenuId = null,
+            pendingDeleteId = null,
+            onOpenMenu = { },
+            onCloseMenu = {},
+            onRequestDelete = {},
+            onCancelDelete = {},
+            onConfirmDelete = {},
         )
     }
 }
@@ -461,7 +712,14 @@ fun TransactionsScreenPreviewLight() {
             onToggleAccount = {},
             onToggleCategory = {},
             onExportClick = {},
-            onAddClick = {}
+            onNavigateToAdd = {},
+            openMenuId = null,
+            pendingDeleteId = null,
+            onOpenMenu = { },
+            onCloseMenu = {},
+            onRequestDelete = {},
+            onCancelDelete = {},
+            onConfirmDelete = {},
         )
     }
 }

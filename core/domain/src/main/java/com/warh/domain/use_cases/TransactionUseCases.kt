@@ -8,6 +8,14 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 import java.time.YearMonth
 
+class GetTransactionUseCase(private val repo: TransactionRepository) {
+    suspend operator fun invoke(id: Long): Transaction? = repo.get(id)
+}
+
+class UpsertTransactionUseCase(private val repo: TransactionRepository) {
+    suspend operator fun invoke(tx: Transaction): Long = repo.upsert(tx)
+}
+
 class GetTransactionsPagerUseCase(private val repo: TransactionRepository) {
     operator fun invoke(filter: TransactionFilter): Flow<PagingData<Transaction>> = repo.pager(filter)
 }

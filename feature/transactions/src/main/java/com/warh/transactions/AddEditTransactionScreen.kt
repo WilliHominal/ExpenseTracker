@@ -61,7 +61,7 @@ import java.util.Locale
 
 @Composable
 fun AddEditTransactionRoute(
-    vm: AddEditTransactionViewModel = koinViewModel(),
+    vm: AddEditTransactionViewModel,
     setFab: (FabSpec?) -> Unit,
     onSaved: () -> Unit,
     onBack: () -> Unit,

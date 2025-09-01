@@ -18,6 +18,12 @@
     <string name="transactions_all_time">Todo</string>
     <string name="transactions_clear_filters">Limpiar</string>
 
+    <string name="transactions_delete_title">Eliminar transacción</string>
+    <string name="transactions_delete_body">¿Querés eliminar esta transacción? Esta acción no se puede deshacer.</string>
+    <string name="transactions_delete_irreversible">Se eliminará de forma permanente.</string>
+    <string name="transactions_delete_confirm">Eliminar</string>
+    <string name="transactions_delete_cancel">Cancelar</string>
+
     <string name="add_transaction_error_account_or_amount_invalid">Importe y cuenta son obligatorios</string>
     <string name="add_transaction_error_default">Ocurrió un error inesperado</string>
     <string name="add_transaction_title">Nueva transacción</string>

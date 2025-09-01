@@ -18,4 +18,6 @@ interface TransactionRepository {
     suspend fun listByAccount(accountId: Long, filter: TransactionFilter): List<Transaction>
     suspend fun sumsByMonth(from: LocalDateTime?, to: LocalDateTime?, accountId: Long?): List<MonthlySumDTO>
     suspend fun spentByCategory(ym: YearMonth, accountId: Long?): List<CategorySpendDTO>
+    suspend fun get(id: Long): Transaction?
+    suspend fun upsert(tx: Transaction): Long
 }

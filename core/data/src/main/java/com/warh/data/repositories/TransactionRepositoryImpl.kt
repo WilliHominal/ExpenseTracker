@@ -4,6 +4,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import androidx.room.withTransaction
 import com.warh.data.db.AppDatabase
 import com.warh.data.mappers.toDomain
 import com.warh.data.mappers.toEntity
@@ -77,4 +78,31 @@ class TransactionRepositoryImpl(
 
     override suspend fun spentByCategory(ym: YearMonth, accountId: Long?) =
         db.transactionDao().spentByCategory(ym.toString(), accountId)
+
+    override suspend fun get(id: Long): Transaction? =
+        db.transactionDao().get(id)?.toDomain()
+
+    override suspend fun upsert(tx: Transaction): Long = db.withTransaction {
+        val dao = db.transactionDao()
+        val accountDao = db.accountDao()
+
+        val existing = dao.get(tx.id)
+        if (existing == null) {
+            val newDelta = if (tx.type == TxType.INCOME) tx.amountMinor else -tx.amountMinor
+            accountDao.applyTransactionDelta(tx.accountId, newDelta)
+            dao.upsert(tx.toEntity())
+        } else {
+            val oldDelta = if (existing.type == TxType.INCOME.name) existing.amountMinor else -existing.amountMinor
+            val newDelta = if (tx.type == TxType.INCOME) tx.amountMinor else -tx.amountMinor
+
+            if (existing.accountId != tx.accountId) {
+                accountDao.applyTransactionDelta(existing.accountId, -oldDelta)
+                accountDao.applyTransactionDelta(tx.accountId, newDelta)
+            } else {
+                val diff = newDelta - oldDelta
+                if (diff != 0L) accountDao.applyTransactionDelta(tx.accountId, diff)
+            }
+            dao.upsert(tx.toEntity())
+        }
+    }
 }

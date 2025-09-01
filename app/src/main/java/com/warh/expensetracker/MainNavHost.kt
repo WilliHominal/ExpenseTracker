@@ -33,7 +33,12 @@ fun MainNavHost(
         composableNoAnim(Destinations.TRANSACTIONS) {
             TransactionsRoute(
                 setFab = setFab,
-                onAddClick = { navController.navigate(Destinations.ADD_TRANSACTION) },
+                onNavigateToAdd = { id: Long? ->
+                    if (id != null)
+                        navController.navigate("${Destinations.ADD_TRANSACTION}?id=$id")
+                    else
+                        navController.navigate(Destinations.ADD_TRANSACTION)
+                }
             )
         }
         composableNoAnim(Destinations.BUDGETS) {
@@ -80,11 +85,23 @@ fun MainNavHost(
             )
         }
 
-        composableAnimated(Destinations.ADD_TRANSACTION) {
+        composableAnimated(
+            route = "${Destinations.ADD_TRANSACTION}?id={id}",
+            arguments = listOf(
+                navArgument("id") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { entry ->
+            val idArg = entry.arguments?.getLong("id") ?: -1L
+            val editingId: Long? = if (idArg > 0) idArg else null
+
             AddEditTransactionRoute(
+                vm = koinViewModel(parameters = { parametersOf(editingId) }),
                 setFab = setFab,
                 onSaved = { navController.navigateUp() },
-                onBack = { navController.navigateUp() }
+                onBack  = { navController.navigateUp() }
             )
         }
 
