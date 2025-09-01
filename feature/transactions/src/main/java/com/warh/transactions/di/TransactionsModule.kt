@@ -1,6 +1,7 @@
 package com.warh.transactions.di
 
 import com.warh.domain.use_cases.AddTransactionUseCase
+import com.warh.domain.use_cases.DeleteTransactionUseCase
 import com.warh.domain.use_cases.GetAccountTransactionsUseCase
 import com.warh.domain.use_cases.GetAccountUseCase
 import com.warh.domain.use_cases.ObserveAccountsUseCase
@@ -34,6 +35,7 @@ val transactionsModule = module {
         )
     }
 
+    factoryOf(::DeleteTransactionUseCase)
     factoryOf(::GetTransactionUseCase)
     factoryOf(::UpsertTransactionUseCase)
     factoryOf(::GetTransactionsPagerUseCase)
