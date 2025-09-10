@@ -24,6 +24,9 @@
     <string name="transactions_delete_confirm">Delete</string>
     <string name="transactions_delete_cancel">Cancel</string>
 
+    <string name="transactions_today">Today</string>
+    <string name="transactions_yesterday">Yesterday</string>
+
     <string name="add_transaction_error_account_or_amount_invalid">Amount and account are required</string>
     <string name="add_transaction_error_default">An error has occurred</string>
     <string name="add_transaction_title">New Transaction</string>

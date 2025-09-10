@@ -2,6 +2,7 @@ package com.warh.transactions
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -91,12 +93,11 @@ import kotlinx.coroutines.flow.flowOf
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.util.Currency
 import java.util.Locale
 import com.warh.commons.R.drawable as CommonDrawables
 
-//TODO: Mostrar separador por día
-//TODO: Add/Edit
 //TODO: Transacciones recurrentes o programadas, en cantidad o porcentaje (tipo plazo fijo)
 
 @Composable
@@ -113,6 +114,7 @@ fun TransactionsRoute(
     val filtersVisible by vm.filtersVisible.collectAsStateWithLifecycle()
     val openMenuId by vm.openMenuId.collectAsStateWithLifecycle()
     val pendingDeleteId by vm.pendingDeleteId.collectAsStateWithLifecycle()
+    val expandedId by vm.expandedId.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val isLoading = pagingItems.loadState.refresh is LoadState.Loading
@@ -141,11 +143,13 @@ fun TransactionsRoute(
         onNavigateToAdd = onNavigateToAdd,
         openMenuId = openMenuId,
         pendingDeleteId = pendingDeleteId,
+        expandedId = expandedId,
         onOpenMenu = vm::openMenu,
         onCloseMenu = vm::closeMenu,
         onRequestDelete = vm::requestDelete,
         onCancelDelete = vm::cancelDelete,
-        onConfirmDelete = vm::confirmDelete
+        onConfirmDelete = vm::confirmDelete,
+        onToggleItem = vm::toggleExpanded,
     )
 }
 
@@ -166,11 +170,13 @@ fun TransactionsScreen(
     onNavigateToAdd: (Long?) -> Unit,
     openMenuId: Long?,
     pendingDeleteId: Long?,
+    expandedId: Long?,
     onOpenMenu: (Long) -> Unit,
     onCloseMenu: () -> Unit,
     onRequestDelete: (Long) -> Unit,
     onCancelDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    onToggleItem: (Long) -> Unit,
 ) {
     val appBarState = rememberTopAppBarState()
     val topSb  = TopAppBarDefaults.enterAlwaysScrollBehavior(appBarState)
@@ -270,31 +276,47 @@ fun TransactionsScreen(
                                 count = pagingItems.itemCount,
                                 key = { idx -> pagingItems.peek(idx)?.id ?: idx }
                             ) { idx ->
-                                pagingItems[idx]?.let { tx ->
-                                    val currencyCode = accounts.find { it.id == tx.accountId }?.currency
-                                        ?: Currency.getInstance(Locale.getDefault()).currencyCode
+                                val tx = pagingItems[idx] ?: return@items
 
-                                    TransactionRowCard(
-                                        tx = tx,
-                                        currencyCode = currencyCode,
-                                        isMenuOpen = openMenuId == tx.id,
-                                        onLongPress = { tx.id?.let(onOpenMenu) },
-                                        onCardTap = {
-                                            if (openMenuId == null) {
-                                                // navegar a editar con el id
-                                                tx.id?.let(onNavigateToAdd)
-                                            } else onCloseMenu()
-                                        },
-                                        onEdit = {
-                                            tx.id?.let(onNavigateToAdd)
-                                            onCloseMenu()
-                                        },
-                                        onDeleteRequest = {
-                                            tx.id?.let(onRequestDelete)
-                                            onCloseMenu()
-                                        }
-                                    )
+                                val account = accounts.firstOrNull { it.id == tx.accountId }
+                                val currencyCode = account?.currency ?: Currency.getInstance(Locale.getDefault()).currencyCode
+                                val category = categories.firstOrNull { it.id == tx.categoryId }
+
+                                val currDay = tx.date.toLocalDate()
+                                val prevDay = if (idx > 0) {
+                                    pagingItems.peek(idx - 1)?.date?.toLocalDate()
+                                } else null
+
+                                val shouldShowHeader = (idx == 0) || (prevDay == null) || (currDay != prevDay)
+
+                                if (shouldShowHeader) {
+                                    DayHeaderRow(day = currDay)
+                                    Spacer(Modifier.height(4.dp))
                                 }
+
+                                TransactionRowCard(
+                                    tx = tx,
+                                    currencyCode = currencyCode,
+                                    categoryName = category?.name,
+                                    categoryColor = category?.iconColorArgb?.let { Color(it.toInt()) },
+                                    accountName = account?.name,
+                                    isMenuOpen = openMenuId == tx.id,
+                                    isExpanded = expandedId == tx.id,
+                                    onLongPress = { onOpenMenu(tx.id) },
+                                    onCardTap = {
+                                        if (openMenuId == null) onToggleItem(tx.id) else onCloseMenu()
+                                    },
+                                    onEdit = {
+                                        onNavigateToAdd(tx.id)
+                                        onCloseMenu()
+                                    },
+                                    onDeleteRequest = {
+                                        onRequestDelete(tx.id)
+                                        onCloseMenu()
+                                    }
+                                )
+
+                                HorizontalDivider(thickness = 0.5.dp)
                             }
                         }
 
@@ -313,22 +335,67 @@ fun TransactionsScreen(
 }
 
 @Composable
+private fun DayHeaderRow(day: java.time.LocalDate) {
+    val cs = MaterialTheme.colorScheme
+    val today = java.time.LocalDate.now()
+    val rawLabel = when (day) {
+        today -> stringResource(R.string.transactions_today)
+        today.minusDays(1) -> stringResource(R.string.transactions_yesterday)
+        else -> day.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM"))
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            thickness = 0.5.dp,
+            color = cs.outlineVariant
+        )
+
+        Text(
+            text = rawLabel.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                .uppercase(), // look más “sección”
+            style = MaterialTheme.typography.labelMedium,
+            color = cs.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp),
+            maxLines = 1
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            thickness = 0.5.dp,
+            color = cs.outlineVariant
+        )
+    }
+}
+
+@Composable
 private fun TransactionRowCard(
     tx: Transaction,
     currencyCode: String,
+    categoryName: String?,
+    categoryColor: Color?,
+    accountName: String?,
     isMenuOpen: Boolean,
+    isExpanded: Boolean,
     onLongPress: () -> Unit,
     onCardTap: () -> Unit,
     onEdit: () -> Unit,
     onDeleteRequest: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(24.dp)
 
     val amountText = remember(tx.amountMinor, currencyCode) {
         formatAmountWithCode(tx.amountMinor, currencyCode)
     }
-    val dateText = remember(tx.date) { formatDateTime(tx.date) }
+
+    val timeText = remember(tx.date) {
+        DateTimeFormatter.ofPattern("HH:mm").format(tx.date)
+    }
 
     val amountColor = when (tx.type) {
         TxType.INCOME  -> Color(0xFF2E7D32)
@@ -341,39 +408,89 @@ private fun TransactionRowCard(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
     ) {
-        ElevatedCard(
-            shape = shape,
-            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = onCardTap,
                     onLongClick = onLongPress
                 )
+                .padding(vertical = 10.dp)
+                .animateContentSize()
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .width(3.dp)
+                        .height(36.dp)
+                        .background(categoryColor ?: cs.outlineVariant, RoundedCornerShape(2.dp))
+                )
+
+                Spacer(Modifier.width(12.dp))
+
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        tx.merchant ?: tx.note ?: stringResource(R.string.transactions_transaction_default_name),
-                        style = MaterialTheme.typography.titleMedium
+                        text = tx.merchant ?: tx.note
+                        ?: stringResource(R.string.transactions_transaction_default_name),
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        dateText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = cs.onSurfaceVariant
-                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    TimePill(timeText = timeText)
                 }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(amountText, style = MaterialTheme.typography.titleMedium, color = amountColor)
+                Spacer(Modifier.width(12.dp))
+
+                Text(
+                    text = amountText,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = amountColor
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = tween(160)) + fadeIn(),
+                exit  = fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (!tx.note.isNullOrBlank() && tx.note != tx.merchant) {
+                        Text(tx.note!!, style = MaterialTheme.typography.bodyMedium)
+                    }
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!accountName.isNullOrBlank()) SmallInfoChip(label = accountName)
+                        if (categoryName != null) {
+                            SmallInfoChip(
+                                label = categoryName,
+                                dotColor = categoryColor ?: cs.outlineVariant
+                            )
+                        }
+                        SmallInfoChip(
+                            label = stringResource(
+                                if (tx.type == TxType.EXPENSE)
+                                    R.string.add_transaction_tx_type_expense
+                                else
+                                    R.string.add_transaction_tx_type_income
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -405,6 +522,54 @@ private fun TransactionRowCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TimePill(timeText: String) {
+    val cs = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = cs.surfaceContainerHighest,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Text(
+            text = timeText,
+            style = MaterialTheme.typography.labelSmall,
+            color = cs.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun SmallInfoChip(
+    label: String,
+    dotColor: Color? = null
+) {
+    val cs = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = cs.surfaceContainerLowest,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (dotColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(dotColor, CircleShape)
+                )
+                Spacer(Modifier.size(6.dp))
+            }
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = cs.onSurface)
         }
     }
 }
@@ -651,6 +816,7 @@ fun TransactionsScreenPreviewDark() {
             accounts = sampleAccounts,
             categories = sampleCategories,
             pagingItems = pagingItems,
+            expandedId = null,
             filtersVisible = true,
             onToggleFilters = {},
             onQueryChange = {},
@@ -666,6 +832,7 @@ fun TransactionsScreenPreviewDark() {
             onRequestDelete = {},
             onCancelDelete = {},
             onConfirmDelete = {},
+            onToggleItem = {}
         )
     }
 }
@@ -705,6 +872,7 @@ fun TransactionsScreenPreviewLight() {
             accounts = sampleAccounts,
             categories = sampleCategories,
             pagingItems = pagingItems,
+            expandedId = null,
             filtersVisible = true,
             onToggleFilters = {},
             onQueryChange = {},
@@ -720,6 +888,7 @@ fun TransactionsScreenPreviewLight() {
             onRequestDelete = {},
             onCancelDelete = {},
             onConfirmDelete = {},
+            onToggleItem = {}
         )
     }
 }

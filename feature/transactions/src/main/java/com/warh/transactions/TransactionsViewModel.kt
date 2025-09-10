@@ -65,6 +65,13 @@ class TransactionsViewModel(
         }
     }
 
+    private val _expandedId = MutableStateFlow<Long?>(null)
+    val expandedId: StateFlow<Long?> = _expandedId
+    fun toggleExpanded(id: Long) {
+        _expandedId.update { if (it == id) null else id }
+    }
+    fun collapseExpanded() { _expandedId.value = null }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val paging: Flow<PagingData<Transaction>> =
         _filter
